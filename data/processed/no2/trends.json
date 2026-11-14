@@ -1,0 +1,107 @@
+{
+  "variable": "no2",
+  "name": "Tropospheric NO₂ (air pollution)",
+  "source": "OMI (OMNO2d v004)",
+  "units": "10¹⁵ molecules/cm²",
+  "period": {
+    "start": "2004-10",
+    "end": "2025-12"
+  },
+  "regions": [
+    {
+      "id": "hermosillo",
+      "name": "Hermosillo",
+      "lat": 29.07,
+      "lon": -110.96,
+      "slope_per_decade": 0.0381,
+      "ci95": [
+        0.0117,
+        0.0646
+      ],
+      "pct_change_per_decade": 3.78,
+      "p_value": 0.19788415547797777,
+      "significant": false,
+      "direction": "no trend",
+      "mean": 1.0081,
+      "months": 255,
+      "start": "2004-10",
+      "end": "2025-12"
+    },
+    {
+      "id": "merida",
+      "name": "Mérida",
+      "lat": 20.97,
+      "lon": -89.62,
+      "slope_per_decade": 0.0068,
+      "ci95": [
+        -0.0422,
+        0.0559
+      ],
+      "pct_change_per_decade": 0.72,
+      "p_value": 0.9348791489985271,
+      "significant": false,
+      "direction": "no trend",
+      "mean": 0.9446,
+      "months": 255,
+      "start": "2004-10",
+      "end": "2025-12"
+    },
+    {
+      "id": "mexico_city",
+      "name": "Mexico City",
+      "lat": 19.43,
+      "lon": -99.13,
+      "slope_per_decade": -0.467,
+      "ci95": [
+        -0.5555,
+        -0.3785
+      ],
+      "pct_change_per_decade": -13.82,
+      "p_value": 1.1772533392573337e-08,
+      "significant": true,
+      "direction": "decreasing",
+      "mean": 3.3803,
+      "months": 255,
+      "start": "2004-10",
+      "end": "2025-12"
+    },
+    {
+      "id": "monterrey",
+      "name": "Monterrey",
+      "lat": 25.67,
+      "lon": -100.31,
+      "slope_per_decade": 0.1311,
+      "ci95": [
+        0.0799,
+        0.1823
+      ],
+      "pct_change_per_decade": 7.02,
+      "p_value": 0.005209859544986095,
+      "significant": true,
+      "direction": "increasing",
+      "mean": 1.8684,
+      "months": 255,
+      "start": "2004-10",
+      "end": "2025-12"
+    },
+    {
+      "id": "puebla",
+      "name": "Puebla",
+      "lat": 19.04,
+      "lon": -98.2,
+      "slope_per_decade": 0.0101,
+      "ci95": [
+        -0.0419,
+        0.0621
+      ],
+      "pct_change_per_decade": 0.49,
+      "p_value": 0.8902583255411158,
+      "significant": false,
+      "direction": "no trend",
+      "mean": 2.0561,
+      "months": 255,
+      "start": "2004-10",
+      "end": "2025-12"
+    }
+  ]
+}

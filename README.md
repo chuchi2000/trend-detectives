@@ -1,74 +1,83 @@
-# Detectives de Tendencias
+# Trend Detectives
 
-Herramienta para el reto **"Be An Earth System Trend Detective!"** del NASA Space Apps Challenge 2026.
+A tool for the NASA Space Apps Challenge 2026 challenge **"Be An Earth System Trend Detective!"**
 
-El usuario elige una variable de ciencias de la Tierra y una región, ve cómo cambia con el tiempo y descubre si esa tendencia es **significativa**.
+Pick an Earth science variable and a region, see how it has changed over time, and find out whether that trend is **statistically significant**.
 
-## Qué hace
+## What it does
 
-1. **Elegir variable y región**: temperatura, lluvia, humedad del suelo, contaminación…
-2. **Mapa de tendencias**: rojo si sube, azul si baja; las zonas con cambio significativo van marcadas.
-3. **Clic en una zona**: gráfica de la serie de tiempo y una tarjeta en lenguaje simple con la pendiente y la prueba de Mann-Kendall.
-4. **Casos de detective**: 2 o 3 ejemplos guiados para aprender a usar la herramienta.
+1. **Choose a variable and a region**: air temperature, precipitation, air pollution (NO₂)…
+2. **Trend map**: red where the variable is rising, blue where it is falling; significant trends are highlighted.
+3. **Click a region**: see its time series and a plain-language summary with the rate of change and the Mann-Kendall test result.
+4. **Detective cases**: 2–3 guided examples that show how to use the tool.
 
-## Estructura
+## Current results (2000–2025)
+
+| Region | Air temperature | Precipitation | NO₂ |
+|---|---|---|---|
+| Mexico City | +0.57 °C/decade ✓ | −0.5 %/decade | **−13.8 %/decade ✓** |
+| Hermosillo | +0.47 °C/decade ✓ | −5.9 %/decade | +3.8 %/decade |
+| Mérida | +0.42 °C/decade ✓ | +3.1 %/decade | +0.7 %/decade |
+| Monterrey | +0.42 °C/decade ✓ | +0.9 %/decade | **+7.0 %/decade ✓** |
+| Puebla | +0.56 °C/decade ✓ | −0.4 %/decade | +0.5 %/decade |
+
+✓ = significant (modified Mann-Kendall test, p < 0.05). NO₂ data start in October 2004.
+
+## Project structure
 
 ```
-data/raw/         datos descargados de NASA (no se suben a git)
-data/processed/   resultados precalculados que lee la app
-data/mock/        datos falsos para desarrollar la app sin esperar
-src/datos/        Persona 1 · descarga y limpieza
-src/analisis/     Persona 2 · tendencias y significancia
-app/              Persona 3 · app y mapa
-docs/             Persona 4 · definiciones, casos, pitch
+data/giovanni/    original CSV files downloaded from NASA Giovanni (do not edit)
+data/processed/   clean series and trend results that the app reads
+src/data/         Data · download and cleaning
+src/analysis/     Analysis · trends and significance
+app/              App and map (Streamlit)
+docs/             Content · data format, definitions, cases, pitch
 ```
 
-**El contrato entre todos es [`docs/formato-resultados.md`](docs/formato-resultados.md).** Si alguien necesita cambiarlo, se avisa al equipo primero.
+**The contract between all roles is [`docs/data-format.md`](docs/data-format.md).** If anyone needs to change it, tell the team first.
 
-## Cómo correrlo
+## How to run it
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate        # en Windows: .venv\Scripts\activate
+source .venv/bin/activate        # on Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-python src/analisis/tendencias.py    # prueba el análisis con datos sintéticos
-streamlit run app/app.py             # abre la app
+python -m streamlit run app/app.py
 ```
 
-### Regenerar los datos
+### Rebuild the data
 
-Los CSV que se bajan de Giovanni van en `data/giovanni/`. Después:
+Put the CSV files downloaded from Giovanni in `data/giovanni/`, then run:
 
 ```bash
-python src/datos/limpiar_giovanni.py data/giovanni   # limpia y convierte unidades
-python src/analisis/analizar_todo.py                  # calcula tendencias de todo
+python src/data/clean_giovanni.py data/giovanni   # cleans files and converts units
+python src/analysis/analyze_all.py                # computes all trends
 ```
 
-Para descargar datos se necesita una cuenta gratuita de NASA Earthdata: https://urs.earthdata.nasa.gov
+## Team
 
-## Equipo
-
-| Rol | Persona |
+| Role | Member |
 |---|---|
-| Datos | _nombre_ |
-| Análisis | _nombre_ |
-| App y mapa | _nombre_ |
-| Contenido y pitch | _nombre_ |
+| Data | _name_ |
+| Analysis | _name_ |
+| App and map | _name_ |
+| Content and pitch | _name_ |
 
-## Cómo trabajamos
+## How we work
 
-- Una rama por persona (`datos`, `analisis`, `app`, `contenido`) y Pull Request a `main`.
-- `main` siempre debe funcionar.
-- No se suben datos crudos (`data/raw/` está en `.gitignore`).
-- Juntas cortas al inicio, en la hora 20 y en la hora 40.
+- One branch per person (`data`, `analysis`, `app`, `content`) and a pull request into `main`.
+- `main` must always work.
+- Large raw data stays out of git (`data/raw/` is in `.gitignore`).
 
-## Fuentes de datos
+## Data sources
 
-| Variable | Fuente |
-|---|---|
-| Temperatura del aire | MERRA-2 |
-| Lluvia | GPM IMERG |
-| Temperatura de superficie | MODIS |
-| Humedad del suelo | GLDAS |
-| NO₂ (contaminación) | OMI |
+All series are area-averaged monthly time series generated with [NASA Giovanni](https://giovanni.gsfc.nasa.gov/giovanni/).
+
+| Variable | Dataset | Resolution |
+|---|---|---|
+| Air temperature at 2 m | MERRA-2 (M2TMNXSLV v5.12.4) | 0.5° × 0.625°, monthly |
+| Precipitation | GPM IMERG Final (GPM_3IMERGM v07) | 0.1°, monthly |
+| Tropospheric NO₂ | OMI (OMNO2d v004) | 0.25°, daily → monthly mean |
+
+Each region is a 1.5° × 1.5° box (about 160 km per side) centered on the city.

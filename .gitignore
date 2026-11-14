@@ -5,7 +5,7 @@ __pycache__/
 venv/
 .ipynb_checkpoints/
 
-# Datos pesados
+# Large data
 data/raw/*
 !data/raw/.gitkeep
 *.nc
@@ -14,11 +14,11 @@ data/raw/*
 *.h5
 *.he5
 
-# Credenciales
+# Credentials
 .env
 .netrc
 
-# Sistema
+# System
 .DS_Store
 Thumbs.db
 .vscode/
