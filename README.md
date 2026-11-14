@@ -36,6 +36,15 @@ python src/analisis/tendencias.py    # prueba el análisis con datos sintéticos
 streamlit run app/app.py             # abre la app
 ```
 
+### Regenerar los datos
+
+Los CSV que se bajan de Giovanni van en `data/giovanni/`. Después:
+
+```bash
+python src/datos/limpiar_giovanni.py data/giovanni   # limpia y convierte unidades
+python src/analisis/analizar_todo.py                  # calcula tendencias de todo
+```
+
 Para descargar datos se necesita una cuenta gratuita de NASA Earthdata: https://urs.earthdata.nasa.gov
 
 ## Equipo

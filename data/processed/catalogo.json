@@ -1,0 +1,76 @@
+{
+  "variables": {
+    "lluvia": {
+      "nombre": "Lluvia",
+      "fuente": "GPM IMERG Final (GPM_3IMERGM v07)",
+      "unidades": "mm/mes"
+    },
+    "temperatura": {
+      "nombre": "Temperatura del aire a 2 m",
+      "fuente": "MERRA-2 (M2TMNXSLV v5.12.4)",
+      "unidades": "°C"
+    },
+    "no2": {
+      "nombre": "NO₂ troposférico (contaminación)",
+      "fuente": "OMI (OMNO2d v004)",
+      "unidades": "10¹⁵ moléculas/cm²"
+    }
+  },
+  "regiones": {
+    "monterrey": {
+      "nombre": "Monterrey",
+      "lat": 25.67,
+      "lon": -100.31,
+      "bbox": [
+        -101.05,
+        24.9,
+        -99.55,
+        26.4
+      ]
+    },
+    "hermosillo": {
+      "nombre": "Hermosillo",
+      "lat": 29.07,
+      "lon": -110.96,
+      "bbox": [
+        -111.7,
+        28.3,
+        -110.2,
+        29.8
+      ]
+    },
+    "merida": {
+      "nombre": "Mérida",
+      "lat": 20.97,
+      "lon": -89.62,
+      "bbox": [
+        -90.4,
+        19.9,
+        -88.9,
+        21.3
+      ]
+    },
+    "puebla": {
+      "nombre": "Puebla",
+      "lat": 19.04,
+      "lon": -98.2,
+      "bbox": [
+        -98.95,
+        18.3,
+        -97.45,
+        19.8
+      ]
+    },
+    "cdmx": {
+      "nombre": "Ciudad de México",
+      "lat": 19.43,
+      "lon": -99.13,
+      "bbox": [
+        -99.9,
+        18.7,
+        -98.4,
+        20.2
+      ]
+    }
+  }
+}

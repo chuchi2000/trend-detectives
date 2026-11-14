@@ -1,0 +1,107 @@
+{
+  "variable": "lluvia",
+  "nombre": "Lluvia",
+  "fuente": "GPM IMERG Final (GPM_3IMERGM v07)",
+  "unidades": "mm/mes",
+  "periodo": {
+    "inicio": "2000-01",
+    "fin": "2025-09"
+  },
+  "zonas": [
+    {
+      "id": "cdmx",
+      "nombre": "Ciudad de México",
+      "lat": 19.43,
+      "lon": -99.13,
+      "pendiente_por_decada": -0.4067,
+      "ic95": [
+        -4.9797,
+        4.1663
+      ],
+      "cambio_pct_por_decada": -0.54,
+      "p_valor": 0.8354687629644795,
+      "significativa": false,
+      "direccion": "no trend",
+      "promedio": 76.0152,
+      "meses": 309,
+      "inicio": "2000-01",
+      "fin": "2025-09"
+    },
+    {
+      "id": "hermosillo",
+      "nombre": "Hermosillo",
+      "lat": 29.07,
+      "lon": -110.96,
+      "pendiente_por_decada": -1.798,
+      "ic95": [
+        -5.1239,
+        1.5278
+      ],
+      "cambio_pct_por_decada": -5.91,
+      "p_valor": 0.44326796393195966,
+      "significativa": false,
+      "direccion": "no trend",
+      "promedio": 30.4391,
+      "meses": 309,
+      "inicio": "2000-01",
+      "fin": "2025-09"
+    },
+    {
+      "id": "merida",
+      "nombre": "Mérida",
+      "lat": 20.97,
+      "lon": -89.62,
+      "pendiente_por_decada": 3.0035,
+      "ic95": [
+        -3.3146,
+        9.3217
+      ],
+      "cambio_pct_por_decada": 3.07,
+      "p_valor": 0.15639984568992538,
+      "significativa": false,
+      "direccion": "no trend",
+      "promedio": 97.855,
+      "meses": 309,
+      "inicio": "2000-01",
+      "fin": "2025-09"
+    },
+    {
+      "id": "monterrey",
+      "nombre": "Monterrey",
+      "lat": 25.67,
+      "lon": -100.31,
+      "pendiente_por_decada": 0.4676,
+      "ic95": [
+        -5.9196,
+        6.8548
+      ],
+      "cambio_pct_por_decada": 0.89,
+      "p_valor": 0.9053632045516864,
+      "significativa": false,
+      "direccion": "no trend",
+      "promedio": 52.299,
+      "meses": 309,
+      "inicio": "2000-01",
+      "fin": "2025-09"
+    },
+    {
+      "id": "puebla",
+      "nombre": "Puebla",
+      "lat": 19.04,
+      "lon": -98.2,
+      "pendiente_por_decada": -0.3259,
+      "ic95": [
+        -5.0269,
+        4.3752
+      ],
+      "cambio_pct_por_decada": -0.43,
+      "p_valor": 0.9003887676532403,
+      "significativa": false,
+      "direccion": "no trend",
+      "promedio": 75.6692,
+      "meses": 309,
+      "inicio": "2000-01",
+      "fin": "2025-09"
+    }
+  ]
+}

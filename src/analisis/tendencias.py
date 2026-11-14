@@ -38,16 +38,25 @@ def analizar_tendencia(serie: pd.Series, alfa: float = 0.05) -> dict:
     ic = (reg.slope - t_crit * reg.stderr, reg.slope + t_crit * reg.stderr)
 
     # Mann-Kendall: ¿la tendencia es real o pudo ser casualidad?
-    # Nota: los datos mensuales están autocorrelacionados y eso puede exagerar la
-    # significancia. Si da tiempo, probar mk.hamed_rao_modification_test.
-    prueba = mk.original_test(anomalias.values, alpha=alfa)
+    # Se usa la versión de Hamed y Rao, que corrige por autocorrelación: en datos
+    # mensuales un mes se parece al anterior, y la prueba original exageraría la
+    # significancia.
+    prueba = mk.hamed_rao_modification_test(anomalias.values, alpha=alfa)
+
+    pendiente_decada = float(reg.slope) * 10
+    media = float(serie.mean())
 
     return {
-        "pendiente_por_decada": round(float(reg.slope) * 10, 4),
+        "pendiente_por_decada": round(pendiente_decada, 4),
         "ic95": [round(float(ic[0]) * 10, 4), round(float(ic[1]) * 10, 4)],
+        "cambio_pct_por_decada": round(100 * pendiente_decada / media, 2) if media else None,
         "p_valor": float(prueba.p),
         "significativa": bool(prueba.p < alfa),
         "direccion": prueba.trend,  # "increasing", "decreasing" o "no trend"
+        "promedio": round(media, 4),
+        "meses": int(len(serie)),
+        "inicio": f"{serie.index.min():%Y-%m}",
+        "fin": f"{serie.index.max():%Y-%m}",
     }
 
 
