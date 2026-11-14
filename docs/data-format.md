@@ -11,7 +11,7 @@ data/processed/<variable>/series/<region>.json     series for the chart shown on
 data/processed/trends_summary.csv                  everything in one table, for a quick check
 ```
 
-Variables: `temperature` (°C), `precipitation` (mm/month), `no2` (10¹⁵ molecules/cm²).
+Variables: `temperature` (°C), `precipitation` (mm/month).
 Regions: `puebla`, `mexico_city`, `monterrey`, `merida`, `hermosillo`.
 
 ## 1. `<region>.csv`: the clean series
@@ -21,8 +21,6 @@ date,value
 2000-01,12.43
 2000-02,14.45
 ```
-
-`no2` also has `valid_days`: how many days had data that month. If fewer than 5, the value is left empty.
 
 ## 2. `trends.json`: what the map shows
 
@@ -49,7 +47,7 @@ date,value
 |---|---|
 | `slope_per_decade` | how much the variable changes every 10 years, in its `units` |
 | `ci95` | 95 % confidence interval of the slope |
-| `pct_change_per_decade` | the slope as a % of the mean (useful for precipitation and NO₂) |
+| `pct_change_per_decade` | the slope as a % of the mean (useful for precipitation) |
 | `p_value` | from the Mann-Kendall test, modified for autocorrelation (Hamed and Rao) |
 | `significant` | `true` if `p_value < 0.05` |
 

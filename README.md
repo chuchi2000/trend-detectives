@@ -6,22 +6,22 @@ Pick an Earth science variable and a region, see how it has changed over time, a
 
 ## What it does
 
-1. **Choose a variable and a region**: air temperature, precipitation, air pollution (NO₂)…
+1. **Choose a variable and a region**: air temperature or precipitation.
 2. **Trend map**: red where the variable is rising, blue where it is falling; significant trends are highlighted.
 3. **Click a region**: see its time series and a plain-language summary with the rate of change and the Mann-Kendall test result.
 4. **Detective cases**: 2–3 guided examples that show how to use the tool.
 
 ## Current results (2000–2025)
 
-| Region | Air temperature | Precipitation | NO₂ |
-|---|---|---|---|
-| Mexico City | +0.57 °C/decade ✓ | −0.5 %/decade | **−13.8 %/decade ✓** |
-| Hermosillo | +0.47 °C/decade ✓ | −5.9 %/decade | +3.8 %/decade |
-| Mérida | +0.42 °C/decade ✓ | +3.1 %/decade | +0.7 %/decade |
-| Monterrey | +0.42 °C/decade ✓ | +0.9 %/decade | **+7.0 %/decade ✓** |
-| Puebla | +0.56 °C/decade ✓ | −0.4 %/decade | +0.5 %/decade |
+| Region | Air temperature | Precipitation |
+|---|---|---|
+| Mexico City | +0.57 °C/decade ✓ | −0.5 %/decade |
+| Hermosillo | +0.47 °C/decade ✓ | −5.9 %/decade |
+| Mérida | +0.42 °C/decade ✓ | +3.1 %/decade |
+| Monterrey | +0.42 °C/decade ✓ | +0.9 %/decade |
+| Puebla | +0.56 °C/decade ✓ | −0.4 %/decade |
 
-✓ = significant (modified Mann-Kendall test, p < 0.05). NO₂ data start in October 2004.
+✓ = significant (modified Mann-Kendall test, p < 0.05). Precipitation data end in September 2025.
 
 ## Project structure
 
@@ -78,6 +78,5 @@ All series are area-averaged monthly time series generated with [NASA Giovanni](
 |---|---|---|
 | Air temperature at 2 m | MERRA-2 (M2TMNXSLV v5.12.4) | 0.5° × 0.625°, monthly |
 | Precipitation | GPM IMERG Final (GPM_3IMERGM v07) | 0.1°, monthly |
-| Tropospheric NO₂ | OMI (OMNO2d v004) | 0.25°, daily → monthly mean |
 
 Each region is a 1.5° × 1.5° box (about 160 km per side) centered on the city.

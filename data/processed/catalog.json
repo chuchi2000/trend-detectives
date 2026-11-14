@@ -9,11 +9,6 @@
       "name": "Air temperature at 2 m",
       "source": "MERRA-2 (M2TMNXSLV v5.12.4)",
       "units": "°C"
-    },
-    "no2": {
-      "name": "Tropospheric NO₂ (air pollution)",
-      "source": "OMI (OMNO2d v004)",
-      "units": "10¹⁵ molecules/cm²"
     }
   },
   "regions": {
