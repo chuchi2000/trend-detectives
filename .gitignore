@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Datos pesados
+data/raw/*
+!data/raw/.gitkeep
+*.nc
+*.nc4
+*.hdf
+*.h5
+*.he5
+
+# Credenciales
+.env
+.netrc
+
+# Sistema
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
