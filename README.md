@@ -1,83 +1,107 @@
-# Trend Detectives
+# Atlas Ambiental de México
 
-A tool for the NASA Space Apps Challenge 2026 challenge **"Be An Earth System Trend Detective!"**
+Plataforma web para explorar cuatro variables ambientales de satélite sobre todo
+México, mes a mes, entre 2000 y 2025:
 
-Pick an Earth science variable and a region, see how it has changed over time, and find out whether that trend is **statistically significant**.
-
-## What it does
-
-1. **Choose a variable and a region**: air temperature, precipitation, air pollution (NO₂)…
-2. **Trend map**: red where the variable is rising, blue where it is falling; significant trends are highlighted.
-3. **Click a region**: see its time series and a plain-language summary with the rate of change and the Mann-Kendall test result.
-4. **Detective cases**: 2–3 guided examples that show how to use the tool.
-
-## Current results (2000–2025)
-
-| Region | Air temperature | Precipitation | NO₂ |
+| Variable | Producto NASA | Unidad mensual | Disponible |
 |---|---|---|---|
-| Mexico City | +0.57 °C/decade ✓ | −0.5 %/decade | **−13.8 %/decade ✓** |
-| Hermosillo | +0.47 °C/decade ✓ | −5.9 %/decade | +3.8 %/decade |
-| Mérida | +0.42 °C/decade ✓ | +3.1 %/decade | +0.7 %/decade |
-| Monterrey | +0.42 °C/decade ✓ | +0.9 %/decade | **+7.0 %/decade ✓** |
-| Puebla | +0.56 °C/decade ✓ | −0.4 %/decade | +0.5 %/decade |
+| Precipitación | GPM IMERG Final Monthly (GPM_3IMERGM) V07 | mm/mes | 2000-01 → 2025-09 |
+| Dióxido de nitrógeno (NO₂) | OMI/Aura OMNO2d V004 (columna troposférica) | molec/cm² | 2004-10 → 2025-12 |
+| Evapotranspiración | MODIS/Terra MOD16A2GF v061 | mm/mes | 2000-03 → 2025-12 |
+| Temperatura de superficie (LST diurna) | MODIS/Terra MOD11A2 v061 | °C | 2000-03 → 2025-12 |
 
-✓ = significant (modified Mann-Kendall test, p < 0.05). NO₂ data start in October 2004.
+Las fechas salen de la auditoría de productos (`metadata/sources/products.json` y
+`metadata/documentation/auditoria-productos.md`). **No todas las variables empiezan en
+enero de 2000**, y el periodo común para comparar las cuatro es **2004-10 → 2025-09**.
 
-## Project structure
+Tiene dos modos que comparten el mismo mapa, fecha, variable y lugar:
+
+- **Explorador**: para estudiantes y público general. Lenguaje claro, preguntas guía,
+  glosario y datos curiosos con fuente.
+- **Científico**: estadísticas por región, series con tendencia (Theil–Sen + Mann–Kendall),
+  correlaciones, comparación de fechas, metadatos completos y exportaciones.
+
+Cambiar de modo no reinicia la consulta: el estado vive en la URL
+(`/atlas?modo=cientifico&variable=no2&fecha=2015-07&region=estado:09`).
+
+## Datos de demostración y datos reales
+
+La API arranca por defecto en **modo DEMO**: genera campos **simulados** para poder
+desarrollar la interfaz sin descargar nada. No son mediciones. Se identifican siempre:
+
+- `/api/health` y todas las respuestas llevan `"mode": "demo"`.
+- La interfaz muestra una franja permanente «Datos de demostración».
+- Los CSV exportados empiezan con una línea de advertencia.
+
+Con `ATLAS_DATA_MODE=real` la API lee solo los archivos procesados de NASA registrados
+en `data/catalog/catalog.json`. Si un mes no está procesado, responde 404 con un mensaje
+claro; nunca rellena con datos inventados ni con ceros.
+
+## Estructura
 
 ```
-data/giovanni/    original CSV files downloaded from NASA Giovanni (do not edit)
-data/processed/   clean series and trend results that the app reads
-src/data/         Data · download and cleaning
-src/analysis/     Analysis · trends and significance
-app/              App and map (Streamlit)
-docs/             Content · data format, definitions, cases, pitch
+Mexico_Environmental_Atlas/
+├── frontend/          React + TypeScript + Vite + Tailwind + MapLibre + Plotly
+├── backend/
+│   ├── app/           API FastAPI (rutas, esquemas Pydantic, servicios)
+│   ├── processing/    Descarga y procesamiento NASA (una carpeta por variable)
+│   └── tests/         Pruebas pytest
+├── data/              raw → processed → optimized, límites y catálogo (no se sube a Git)
+├── metadata/          Auditoría de productos, calidad y documentación científica
+├── docs/              Guías (instalación, ejecución, frontend, backend, NASA…)
+├── scripts/           Utilidades sueltas
+├── notebooks/         Cuadernos de exploración
+├── docker-compose.yml TiTiler (teselas COG) y PostGIS (etapa futura)
+└── PROJECT_STATUS.md  Qué está hecho, qué falta y qué está probado
 ```
 
-**The contract between all roles is [`docs/data-format.md`](docs/data-format.md).** If anyone needs to change it, tell the team first.
+## Inicio rápido (modo DEMO)
 
-## How to run it
+Requisitos: Python 3.11+, Node.js 20.19+ (o 22.12+) y Git. Detalle en
+[`docs/01-instalacion.md`](docs/01-instalacion.md).
 
 ```bash
+# 1. Configuración
+cp .env.example .env
+
+# 2. Backend (terminal 1)
+cd backend
 python -m venv .venv
-source .venv/bin/activate        # on Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+uvicorn app.main:app --reload --port 8000
 
-python -m streamlit run app/app.py
+# 3. Frontend (terminal 2)
+cd frontend
+npm install
+npm run dev
 ```
 
-### Rebuild the data
+Abre <http://localhost:5173>. La documentación interactiva de la API está en
+<http://localhost:8000/docs>.
 
-Put the CSV files downloaded from Giovanni in `data/giovanni/`, then run:
+## Guías
 
-```bash
-python src/data/clean_giovanni.py data/giovanni   # cleans files and converts units
-python src/analysis/analyze_all.py                # computes all trends
-```
+1. [Instalación](docs/01-instalacion.md)
+2. [Ejecución](docs/02-ejecucion.md)
+3. [Frontend](docs/03-frontend.md)
+4. [Backend y API](docs/04-backend.md)
+5. [Procesamiento NASA](docs/05-procesamiento-nasa.md)
+6. [Agregar una variable nueva](docs/06-agregar-variables.md)
+7. [Cuenta Earthdata y credenciales](docs/07-earthdata.md)
+8. [VS Code: extensiones y configuración](docs/08-vscode.md)
+9. [Auditoría de productos](metadata/documentation/auditoria-productos.md)
 
-## Team
+## Seguridad
 
-| Role | Member |
-|---|---|
-| Data | _name_ |
-| Analysis | _name_ |
-| App and map | _name_ |
-| Content and pitch | _name_ |
+- Las credenciales de NASA solo las usan los scripts de `backend/processing`, leídas de
+  variables de entorno o de `~/.netrc`. **Nunca** van en el frontend.
+- `.env` y `.netrc` están en `.gitignore`. Comparte solo `.env.example`.
+- La API solo acepta `GET`, valida todos los parámetros y nunca envía NetCDF completos al
+  navegador: entrega estadísticas, series, rejillas pequeñas o teselas.
 
-## How we work
+## Créditos de datos
 
-- One branch per person (`data`, `analysis`, `app`, `content`) and a pull request into `main`.
-- `main` must always work.
-- Large raw data stays out of git (`data/raw/` is in `.gitignore`).
-
-## Data sources
-
-All series are area-averaged monthly time series generated with [NASA Giovanni](https://giovanni.gsfc.nasa.gov/giovanni/).
-
-| Variable | Dataset | Resolution |
-|---|---|---|
-| Air temperature at 2 m | MERRA-2 (M2TMNXSLV v5.12.4) | 0.5° × 0.625°, monthly |
-| Precipitation | GPM IMERG Final (GPM_3IMERGM v07) | 0.1°, monthly |
-| Tropospheric NO₂ | OMI (OMNO2d v004) | 0.25°, daily → monthly mean |
-
-Each region is a 1.5° × 1.5° box (about 160 km per side) centered on the city.
+Cita cada producto con su DOI (están en `metadata/sources/products.json`). Límites
+estatales y municipales: Marco Geoestadístico del INEGI. Mapa base: OpenFreeMap /
+OpenStreetMap.

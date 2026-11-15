@@ -1,25 +1,36 @@
+# Credenciales y configuración local: NUNCA se suben al repositorio
+.env
+.env.*
+!.env.example
+.netrc
+_netrc
+
 # Python
 __pycache__/
 *.py[cod]
 .venv/
 venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
 .ipynb_checkpoints/
 
-# Large data
-data/raw/*
-!data/raw/.gitkeep
-*.nc
-*.nc4
-*.hdf
-*.h5
-*.he5
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+*.tsbuildinfo
 
-# Credentials
-.env
-.netrc
+# Datos: pesan mucho y se regeneran con los scripts (se conservan las carpetas)
+data/raw/**
+data/processed/**
+data/optimized/**
+data/boundaries/**
+data/catalog/**
+!data/**/.gitkeep
+!data/README.md
 
-# System
+# Sistema
 .DS_Store
 Thumbs.db
-.vscode/
-.idea/

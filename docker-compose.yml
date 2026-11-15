@@ -1,0 +1,36 @@
+# Servicios de apoyo. Ejecutar desde la raíz del proyecto:  docker compose up -d titiler
+#
+# titiler: sirve teselas PNG de los COG en data/ para el mapa (modo DATOS REALES).
+#          La carpeta data/ se monta como /data dentro del contenedor (solo lectura).
+#
+# postgis: base PostgreSQL + PostGIS para la siguiente etapa (catálogo y límites en
+#          base de datos). Todavía no la usa la API; se deja lista para cuando se migre.
+#          Arranca solo si la pides:  docker compose --profile postgis up -d
+
+services:
+  titiler:
+    image: ghcr.io/developmentseed/titiler:latest
+    command: uvicorn titiler.application.main:app --host 0.0.0.0 --port 8000 --workers 1
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./data:/data:ro
+    environment:
+      - CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif
+      - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
+      - TITILER_API_CORS_ORIGINS=http://localhost:5173
+
+  postgis:
+    image: postgis/postgis:16-3.4
+    profiles: ["postgis"]
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: atlas
+      POSTGRES_USER: atlas
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cambia-esta-clave}
+    volumes:
+      - postgis-data:/var/lib/postgresql/data
+
+volumes:
+  postgis-data:

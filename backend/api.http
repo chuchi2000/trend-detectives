@@ -1,0 +1,42 @@
+### Pruebas manuales de la API con la extensión REST Client.
+### Abre este archivo en VS Code y pulsa "Send Request" sobre cada bloque.
+### Antes, inicia el backend: uvicorn app.main:app --reload --port 8000
+
+@api = http://localhost:8000/api
+
+### Estado y modo de datos (demo / real)
+GET {{api}}/health
+
+### Las cuatro variables, con su disponibilidad
+GET {{api}}/variables
+
+### Ficha técnica auditada de un producto
+GET {{api}}/metadata/no2
+
+### Capa del mapa (ruta general y atajo)
+GET {{api}}/layers/precipitation?year=2015&month=7
+###
+GET {{api}}/temperature?year=2020&month=5
+
+### Fecha sin datos: debe responder 404 con un mensaje claro
+GET {{api}}/no2?year=2003&month=1
+
+### Valor en un punto (San Luis Potosí)
+GET {{api}}/point?variable=temperature&year=2015&month=5&lat=22.15&lon=-100.98
+
+### Estadísticas nacionales y por estado
+GET {{api}}/statistics?variable=precipitation&year=2015&month=7
+###
+GET {{api}}/statistics?variable=precipitation&year=2015&month=7&region=estado:24
+
+### Serie de tiempo con tendencia
+GET {{api}}/timeseries?variable=evapotranspiration&lat=17&lon=-93
+
+### Correlación (anomalías mensuales)
+GET {{api}}/correlation?a=precipitation&b=evapotranspiration&lat=17&lon=-93
+
+### Comparación de dos fechas
+GET {{api}}/compare?variable=precipitation&a=2015-01&b=2015-07
+
+### Exportación CSV
+GET {{api}}/export/timeseries.csv?variable=no2&lat=19.43&lon=-99.13&start=2015-01&end=2015-12

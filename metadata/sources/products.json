@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-11-14",
+  "audit_note": "Auditoría hecha con el catálogo CMR de NASA, las páginas de Earthdata/LP DAAC/GES DISC y las especificaciones de archivo de LAADS. La disponibilidad real de cada mes la confirma el catálogo local (data/catalog) después de descargar y procesar.",
+  "study_period": { "start": "2000-01", "end": "2025-12" },
+  "comparison_period": {
+    "start": "2004-10",
+    "end": "2025-09",
+    "reason": "Periodo en el que las cuatro variables tienen datos: NO₂ (OMI) empieza en octubre de 2004 e IMERG V07 Final termina en septiembre de 2025."
+  },
+  "common_grid": {
+    "resolution_deg": 0.25,
+    "bounds": [-118.75, 14.25, -86.25, 33.25],
+    "crs": "EPSG:4326",
+    "rationale": "0.25° es la resolución nativa de OMNO2d, el producto más grueso. Es la malla más fina que no inventa detalle en ninguna variable: los productos más finos se agregan con un promedio conservativo ponderado por área y ninguno se sobremuestrea."
+  },
+  "variables": {
+    "precipitation": {
+      "order": 1,
+      "name": "Precipitación",
+      "short_label": "Precipitación",
+      "unit": "mm/mes",
+      "unit_long": "milímetros acumulados en el mes",
+      "data_type": "Estimación satelital multisatélite calibrada con pluviómetros (producto de nivel 3)",
+      "product": {
+        "short_name": "GPM_3IMERGM",
+        "version": "07",
+        "title": "GPM IMERG Final Precipitation L3 1 month 0.1 degree x 0.1 degree V07",
+        "concept_id": "C2723754851-GES_DISC",
+        "doi": "10.5067/GPM/IMERG/3B-MONTH/07",
+        "provider": "NASA GES DISC",
+        "mission": "GPM (NASA/JAXA), con TRMM para el periodo previo a junio de 2014",
+        "instrument": "Constelación de radiómetros de microondas e infrarrojo combinados por el algoritmo IMERG",
+        "format": "HDF5",
+        "access": "earthaccess (GES DISC)"
+      },
+      "temporal": {
+        "collection_start": "1998-01-01",
+        "collection_end": "2025-09-30",
+        "native_resolution": "mensual",
+        "available_start": "2000-01",
+        "available_end": "2025-09"
+      },
+      "spatial": {
+        "native_resolution": "0.1° × 0.1° (≈ 10 km)",
+        "native_resolution_deg": 0.1,
+        "crs": "EPSG:4326",
+        "coverage": "global"
+      },
+      "layers": [
+        { "name": "Grid/precipitation", "role": "valor", "units": "mm/hr", "dtype": "float32", "fill_value": -9999.900390625, "scale_factor": 1, "description": "Tasa media de precipitación del mes (campo calibrado, el recomendado para la mayoría de usos)." },
+        { "name": "Grid/randomError", "role": "incertidumbre", "units": "mm/hr", "dtype": "float32", "fill_value": -9999.900390625, "scale_factor": 1, "description": "Error aleatorio estimado." },
+        { "name": "Grid/precipitationQualityIndex", "role": "calidad", "units": "pluviómetros equivalentes por caja de 2.5°", "dtype": "float32", "fill_value": -9999.900390625, "scale_factor": 1, "description": "Índice de calidad." },
+        { "name": "Grid/gaugeRelativeWeighting", "role": "calidad", "units": "%", "dtype": "int16", "fill_value": -9999, "scale_factor": 1, "description": "Peso relativo de los pluviómetros." }
+      ],
+      "processing": {
+        "monthly_method": "El producto ya es mensual; no se agrega en el tiempo.",
+        "conversion": "mm/mes = (mm/h) × 24 × días del mes",
+        "quality_filter": "Se descartan los valores de relleno (-9999.9) y los negativos. Se conservan randomError y precipitationQualityIndex como capas de calidad.",
+        "comparative": "Promedio conservativo ponderado por área de 0.1° a 0.25°; una celda de 0.25° requiere al menos 50 % de su área con datos válidos."
+      },
+      "display": {
+        "scale": 1,
+        "display_unit": "mm/mes",
+        "breaks": [5, 15, 30, 50, 75, 100, 150, 250],
+        "ramp": ["#F2F7F2", "#D2EBE4", "#ADDAD7", "#7DC4CB", "#53A7BE", "#2D89AF", "#22699C", "#214B81", "#202F63"],
+        "identity_color": "#22699C",
+        "words": { "low": "Menos lluvia", "high": "Más lluvia" }
+      },
+      "caveats": [
+        "La versión 07 Final termina en septiembre de 2025 porque sus productos de entrada pasaron a la versión 08. Octubre a diciembre de 2025 quedan sin datos hasta que se publique IMERG V08 Final; al publicarse conviene reprocesar todo el registro y no mezclar versiones.",
+        "Las estimaciones satelitales de precipitación tienen menor habilidad sobre terreno complejo, superficies congeladas y zonas costeras.",
+        "Los cambios en la constelación de satélites a lo largo del tiempo pueden introducir artefactos en estudios de varios años."
+      ],
+      "sources": [
+        { "label": "CMR: colección GPM_3IMERGM V07", "url": "https://cmr.earthdata.nasa.gov/search/collections.json?short_name=GPM_3IMERGM" },
+        { "label": "Earthdata: GPM_3IMERGM V07 (variables)", "url": "https://www.earthdata.nasa.gov/data/catalog/ges-disc-gpm-3imergm-07" },
+        { "label": "GPM: calendario de transición a IMERG V08", "url": "https://gpm.nasa.gov/data/news/imerg-v08-transition-schedule" }
+      ]
+    },
+    "no2": {
+      "order": 2,
+      "name": "Dióxido de nitrógeno (NO₂)",
+      "short_label": "NO₂",
+      "unit": "molec/cm²",
+      "unit_long": "moléculas por centímetro cuadrado en la columna troposférica",
+      "data_type": "Recuperación satelital de columna troposférica (nivel 3 diario, promediada a mensual)",
+      "product": {
+        "short_name": "OMNO2d",
+        "version": "004",
+        "title": "OMI/Aura NO2 Cloud-Screened Total and Tropospheric Column L3 Global Gridded 0.25 degree x 0.25 degree Ver 5.0, Col 004",
+        "concept_id": "C3333493715-GES_DISC",
+        "doi": "10.5067/AURA/OMI/DATA3407",
+        "provider": "NASA GES DISC",
+        "mission": "Aura",
+        "instrument": "OMI (Ozone Monitoring Instrument)",
+        "format": "HDF-EOS5",
+        "access": "earthaccess (GES DISC)",
+        "alternative": { "version": "003", "concept_id": "C1266136111-GES_DISC", "note": "Colección anterior (actualizada por última vez en 2019). La propuesta original pedía V003; se recomienda V004 por ser la colección vigente. El procesamiento acepta ambas." }
+      },
+      "temporal": {
+        "collection_start": "2004-10-01",
+        "collection_end": null,
+        "native_resolution": "diaria",
+        "available_start": "2004-10",
+        "available_end": "2025-12"
+      },
+      "spatial": {
+        "native_resolution": "0.25° × 0.25° (≈ 25 km)",
+        "native_resolution_deg": 0.25,
+        "crs": "EPSG:4326",
+        "coverage": "global"
+      },
+      "layers": [
+        { "name": "HDFEOS/GRIDS/ColumnAmountNO2/Data_Fields/ColumnAmountNO2TropCloudScreened", "role": "valor", "units": "molec/cm2", "dtype": "float32", "fill_value": -1.2676506002282e30, "scale_factor": 1, "description": "Columna troposférica de NO₂ con filtro de nubes. Filtros ya aplicados por el productor: ángulo cenital solar 0–85°, fracción de nubes < 30 %, banderas de calidad de la columna y de anomalía de filas, reflectividad del terreno." },
+        { "name": "HDFEOS/GRIDS/ColumnAmountNO2/Data_Fields/Weight", "role": "calidad", "units": "sin unidad", "dtype": "float32", "fill_value": -1.2676506002282e30, "scale_factor": 1, "description": "Peso de la celda en el promedio del productor (la página oficial no lo describe más)." }
+      ],
+      "processing": {
+        "monthly_method": "Promedio aritmético de los días con dato válido en cada celda. Se guarda el número de días válidos y la cobertura (días válidos ÷ días del mes).",
+        "conversion": "Sin conversión; se muestra en unidades de 10¹⁵ molec/cm².",
+        "quality_filter": "Se usa la variable con filtro de nubes. Se descartan valores de relleno. Una celda mensual necesita al menos 3 días válidos (parámetro ajustable). Los valores negativos individuales se conservan porque eliminarlos sesga el promedio hacia arriba.",
+        "comparative": "Ya está en la malla de 0.25°; solo se recorta a México."
+      },
+      "display": {
+        "scale": 1e15,
+        "display_unit": "×10¹⁵ molec/cm²",
+        "breaks": [0.5, 1, 1.5, 2, 3, 4, 6, 9],
+        "ramp": ["#F5F3F8", "#E3DEEE", "#CFC4E2", "#B5A5D3", "#9A84C2", "#8064B0", "#674A9A", "#4D337E", "#331F5E"],
+        "identity_color": "#674A9A",
+        "words": { "low": "Menos NO₂", "high": "Más NO₂" }
+      },
+      "caveats": [
+        "El satélite mide la cantidad de NO₂ en toda la columna de aire troposférica; no es la concentración que se respira a nivel de calle.",
+        "Con nubes no hay medición útil: en la temporada de lluvias algunas celdas tienen pocos días válidos. Revisa la cobertura antes de comparar meses.",
+        "La resolución de 0.25° (≈ 25 km) mezcla ciudades y su entorno en una misma celda."
+      ],
+      "sources": [
+        { "label": "CMR: colecciones OMNO2d (V003 y V004)", "url": "https://cmr.earthdata.nasa.gov/search/collections.json?short_name=OMNO2d" },
+        { "label": "Earthdata: OMNO2d V004 (variables y filtros)", "url": "https://www.earthdata.nasa.gov/data/catalog/ges-disc-omno2d-004" },
+        { "label": "README del producto OMNO2", "url": "https://acdisc.gesdisc.eosdis.nasa.gov/data//Aura_OMI_Level3/OMNO2d.003/doc/README.OMNO2.pdf" }
+      ]
+    },
+    "evapotranspiration": {
+      "order": 3,
+      "name": "Evapotranspiración",
+      "short_label": "Evapotranspiración",
+      "unit": "mm/mes",
+      "unit_long": "milímetros de agua evapotranspirada en el mes",
+      "data_type": "Producto modelado de nivel 4 (Penman–Monteith con datos MODIS y reanálisis meteorológico), con huecos rellenados",
+      "product": {
+        "short_name": "MOD16A2GF",
+        "version": "061",
+        "title": "MODIS/Terra Net Evapotranspiration Gap-Filled 8-Day L4 Global 500m SIN Grid V061",
+        "concept_id": "C2565791021-LPCLOUD",
+        "doi": "10.5067/MODIS/MOD16A2GF.061",
+        "provider": "NASA LP DAAC",
+        "mission": "Terra",
+        "instrument": "MODIS",
+        "format": "HDF-EOS2 (descarga vía AppEEARS como GeoTIFF en coordenadas geográficas)",
+        "access": "AppEEARS (capas ET_500m y ET_QC_500m)"
+      },
+      "temporal": {
+        "collection_start": "2000-01-01",
+        "collection_end": null,
+        "native_resolution": "compuesto de 8 días (el último del año dura 5 o 6 días)",
+        "available_start": "2000-03",
+        "available_end": "2025-12"
+      },
+      "spatial": {
+        "native_resolution": "500 m",
+        "native_resolution_deg": 0.0041666667,
+        "crs": "Sinusoidal MODIS (AppEEARS entrega EPSG:4326)",
+        "coverage": "global (superficies terrestres)"
+      },
+      "layers": [
+        { "name": "ET_500m", "role": "valor", "units": "kg/m²/8 días (= mm/8 días)", "dtype": "int16", "fill_value": 32767, "valid_range": [-32767, 32700], "scale_factor": 0.1, "description": "Suma de evapotranspiración de los días del compuesto." },
+        { "name": "ET_QC_500m", "role": "calidad", "units": "bits", "dtype": "uint8", "fill_value": 255, "valid_range": [0, 254], "scale_factor": 1, "description": "Copiada del producto de entrada MOD15A2H. Bit 0: 0 = algoritmo principal, 1 = otra calidad (respaldo o relleno). Bits 3-4: estado de nubes. Bits 5-7: algoritmo usado." }
+      ],
+      "special_values": {
+        "32767": "relleno",
+        "32766": "cuerpos de agua",
+        "32765": "suelo desnudo o vegetación escasa",
+        "32764": "nieve o hielo perenne",
+        "32763": "humedales permanentes",
+        "32762": "zona urbana",
+        "32761": "sin clasificar"
+      },
+      "processing": {
+        "monthly_method": "Cada compuesto se reparte de forma uniforme entre sus días (valor ÷ días del compuesto). El total mensual suma los días que caen dentro del mes. Si faltan días con dato, se escala por días del mes ÷ días cubiertos solo cuando la cobertura es de al menos 80 %; con menos, el mes queda sin dato.",
+        "conversion": "valor × 0.1 = mm en el compuesto",
+        "quality_filter": "Se eliminan el relleno y los códigos especiales 32761–32766 (agua, urbano, desierto, etc.): no son evapotranspiración cero. Como el producto GF ya rellenó por interpolación las entradas de mala calidad, no se descartan píxeles por ET_QC; en su lugar se guarda la fracción de píxeles con bit 0 = 1 como indicador de calidad. Con --qc-estricto se descartan.",
+        "comparative": "Promedio conservativo ponderado por área de 500 m a 0.25°, con al menos 50 % del área válida."
+      },
+      "display": {
+        "scale": 1,
+        "display_unit": "mm/mes",
+        "breaks": [5, 10, 20, 35, 50, 70, 90, 120],
+        "ramp": ["#F7F3DF", "#E6E9BC", "#CEDD9B", "#AACE7E", "#82B769", "#599E58", "#3B814B", "#23613C", "#133F2C"],
+        "identity_color": "#3B814B",
+        "words": { "low": "Menor", "high": "Mayor" }
+      },
+      "caveats": [
+        "Es un producto modelado: combina observaciones MODIS con datos meteorológicos de reanálisis.",
+        "Las zonas urbanas, desiertos sin vegetación y cuerpos de agua aparecen sin dato porque el producto no las calcula.",
+        "La versión con huecos rellenados (GF) se publica al terminar cada año.",
+        "El primer compuesto de Terra MODIS es de febrero de 2000; por la regla de cobertura, el primer mes completo es marzo de 2000."
+      ],
+      "sources": [
+        { "label": "Earthdata: MOD16A2GF V061", "url": "https://www.earthdata.nasa.gov/data/catalog/lpcloud-mod16a2gf-061" },
+        { "label": "LAADS: especificación de archivo MOD16A2GF C6.1", "url": "https://ladsweb.modaps.eosdis.nasa.gov/filespec/MODIS/61/MOD16A2GF_c61" },
+        { "label": "Guía de usuario MOD16 V6.1", "url": "https://lpdaac.usgs.gov/documents/931/MOD16_User_Guide_V61.pdf" }
+      ]
+    },
+    "temperature": {
+      "order": 4,
+      "name": "Temperatura superficial terrestre",
+      "short_label": "Temperatura",
+      "unit": "°C",
+      "unit_long": "grados Celsius (temperatura diurna de la superficie)",
+      "data_type": "Recuperación satelital de temperatura de la superficie terrestre (nivel 3, compuesto de 8 días, promediado a mensual)",
+      "product": {
+        "short_name": "MOD11A2",
+        "version": "061",
+        "title": "MODIS/Terra Land Surface Temperature/Emissivity 8-Day L3 Global 1km SIN Grid V061",
+        "concept_id": "C2269056084-LPCLOUD",
+        "doi": "10.5067/MODIS/MOD11A2.061",
+        "provider": "NASA LP DAAC",
+        "mission": "Terra",
+        "instrument": "MODIS",
+        "format": "HDF-EOS2 (descarga vía AppEEARS como GeoTIFF en coordenadas geográficas)",
+        "access": "AppEEARS (capas LST_Day_1km y QC_Day)"
+      },
+      "temporal": {
+        "collection_start": "2000-02-18",
+        "collection_end": null,
+        "native_resolution": "compuesto de 8 días",
+        "available_start": "2000-03",
+        "available_end": "2025-12"
+      },
+      "spatial": {
+        "native_resolution": "1 km",
+        "native_resolution_deg": 0.0083333333,
+        "crs": "Sinusoidal MODIS (AppEEARS entrega EPSG:4326)",
+        "coverage": "global (superficies terrestres)"
+      },
+      "layers": [
+        { "name": "LST_Day_1km", "role": "valor", "units": "K", "dtype": "uint16", "fill_value": 0, "valid_range": [7500, 65535], "scale_factor": 0.02, "description": "Promedio simple de las temperaturas diarias de MOD11A1 dentro del compuesto." },
+        { "name": "QC_Day", "role": "calidad", "units": "bits", "dtype": "uint8", "fill_value": null, "valid_range": [0, 255], "scale_factor": 1, "description": "Bits 0-1: calidad obligatoria (00 buena, 01 otra calidad, 10 sin dato por nubes, 11 sin dato por otras razones). Bits 6-7: error medio de LST (00 ≤ 1 K, 01 ≤ 2 K, 10 ≤ 3 K, 11 > 3 K)." }
+      ],
+      "processing": {
+        "monthly_method": "Promedio de los compuestos ponderado por los días de cada compuesto que caen en el mes. Un mes necesita al menos 50 % de sus días cubiertos por compuestos válidos.",
+        "conversion": "valor × 0.02 = K; K − 273.15 = °C",
+        "quality_filter": "Se aceptan píxeles con calidad obligatoria 00, o 01 con error de LST ≤ 2 K. Se descartan 10 y 11 y el valor 0 (relleno).",
+        "comparative": "Promedio conservativo ponderado por área de 1 km a 0.25°, con al menos 50 % del área válida."
+      },
+      "display": {
+        "scale": 1,
+        "display_unit": "°C",
+        "breaks": [10, 15, 20, 25, 30, 35, 40, 45],
+        "ramp": ["#FFF4D1", "#FDDFA7", "#FBC680", "#F7A662", "#ED844D", "#DD613D", "#C24535", "#9B2F2F", "#6F1D28"],
+        "identity_color": "#C24535",
+        "words": { "low": "Más fría", "high": "Más caliente" }
+      },
+      "caveats": [
+        "Es la temperatura de la superficie del terreno a la hora de paso del satélite (de mañana), no la temperatura del aire.",
+        "Terra dejó de corregir su órbita en 2020 y su hora de paso se adelanta cada año. Una hora de paso más temprana registra superficies algo más frías, así que las tendencias diurnas desde 2020 deben leerse con cautela.",
+        "Con nubes no hay medición: los meses lluviosos tienen menos compuestos válidos."
+      ],
+      "sources": [
+        { "label": "Earthdata: MOD11A2 V061", "url": "https://www.earthdata.nasa.gov/data/catalog/lpcloud-mod11a2-061" },
+        { "label": "LAADS: especificación de archivo MOD11A2 C6.1 (bits de QC)", "url": "https://ladsweb.modaps.eosdis.nasa.gov/filespec/MODIS/61/MOD11A2" },
+        { "label": "Terra: deriva orbital", "url": "https://terra.nasa.gov/?p=190003" }
+      ]
+    }
+  }
+}

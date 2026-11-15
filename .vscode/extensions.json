@@ -1,0 +1,18 @@
+{
+  // Extensiones recomendadas. VS Code las ofrece al abrir la carpeta del proyecto.
+  // Indispensables: ESLint, Prettier, Tailwind CSS IntelliSense, Python, Pylance, Ruff.
+  // Opcionales: snippets de React, Jupyter, GitLens, REST Client, Container Tools (Docker).
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "dsznajder.es7-react-js-snippets",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "ms-toolsai.jupyter",
+    "eamodio.gitlens",
+    "humao.rest-client",
+    "ms-azuretools.vscode-containers"
+  ]
+}

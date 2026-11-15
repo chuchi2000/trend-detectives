@@ -1,0 +1,147 @@
+/*
+ * Identidad visual del Atlas (propuesta aprobada).
+ *
+ * Dos capas de colores:
+ * 1. Paleta fija (@theme): Papel, Tinta, Bosque, Océano, Grafito, Hielo...
+ *    Se usan como clases de Tailwind: bg-papel, text-bosque, border-linea...
+ * 2. Tokens semánticos (--fondo, --texto, --acento...) que cambian según el tema.
+ *    El tema claro es el del modo Explorador; el oscuro, el del modo Científico.
+ *    Se usan como bg-fondo, text-texto, border-borde, bg-acento...
+ *
+ * Para cambiar un color en toda la plataforma, edita su valor aquí.
+ */
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+
+  /* Tema claro (Explorador) */
+  --color-papel: #eff4f1;
+  --color-superficie: #ffffff;
+  --color-tinta: #10302a;
+  --color-tinta-suave: #4a625c;
+  --color-bosque: #1d6b4f;
+  --color-bosque-claro: #ddede5;
+  --color-oceano: #155e83;
+  --color-turquesa: #1e9c96;
+  --color-sol: #f2b33d;
+  --color-sol-claro: #fff6e0;
+  --color-linea: #c3d2ce;
+  --color-pista: #e1eae6;
+
+  /* Tema oscuro (Científico) */
+  --color-grafito: #182126;
+  --color-pizarra: #212c33;
+  --color-linea-oscura: #3a4a53;
+  --color-niebla: #e6eef0;
+  --color-niebla-suave: #9fb1b8;
+  --color-hielo: #7fd1dc;
+  --color-hielo-tinta: #0f2228;
+}
+
+@theme inline {
+  --color-fondo: var(--fondo);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-texto: var(--texto);
+  --color-texto-suave: var(--texto-suave);
+  --color-borde: var(--borde);
+  --color-borde-fuerte: var(--borde-fuerte);
+  --color-acento: var(--acento);
+  --color-acento-texto: var(--acento-texto);
+  --color-acento-suave: var(--acento-suave);
+  --color-enlace: var(--enlace);
+}
+
+:root,
+[data-tema="claro"] {
+  --fondo: var(--color-papel);
+  --panel: var(--color-superficie);
+  --panel-2: var(--color-pista);
+  --texto: var(--color-tinta);
+  --texto-suave: var(--color-tinta-suave);
+  --borde: var(--color-linea);
+  --borde-fuerte: #7e948e;
+  --acento: var(--color-bosque);
+  --acento-texto: #ffffff;
+  --acento-suave: var(--color-bosque-claro);
+  --enlace: var(--color-oceano);
+  color-scheme: light;
+}
+
+[data-tema="oscuro"] {
+  --fondo: var(--color-grafito);
+  --panel: var(--color-pizarra);
+  --panel-2: #1c262c;
+  --texto: var(--color-niebla);
+  --texto-suave: var(--color-niebla-suave);
+  --borde: var(--color-linea-oscura);
+  --borde-fuerte: #6c8089;
+  --acento: var(--color-hielo);
+  --acento-texto: var(--color-hielo-tinta);
+  --acento-suave: #24343b;
+  --enlace: var(--color-hielo);
+  color-scheme: dark;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-fondo text-texto font-sans antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+  }
+  a {
+    @apply text-enlace underline-offset-2 hover:underline;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-turquesa);
+    outline-offset: 2px;
+  }
+}
+
+@utility font-expandida {
+  font-stretch: 125%;
+}
+@utility font-semicondensada {
+  font-stretch: 87.5%;
+}
+@utility cifras {
+  font-variant-numeric: tabular-nums;
+}
+@utility rayado-sin-dato {
+  background: repeating-linear-gradient(45deg, var(--panel) 0 4px, var(--borde-fuerte) 4px 6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* MapLibre: controles con los colores del tema */
+.maplibregl-ctrl-group {
+  background: var(--panel) !important;
+  border: 1px solid var(--borde);
+}
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--borde) !important;
+}
+[data-tema="oscuro"] .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+.maplibregl-ctrl-attrib {
+  font-size: 11px;
+}

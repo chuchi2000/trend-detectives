@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atlas-ambiental-mexico"
+version = "0.1.0"
+description = "Backend y procesamiento NASA del Atlas Ambiental de México"
+requires-python = ">=3.11"
+
+# Núcleo mínimo: lo que necesita la API para arrancar en modo DEMO.
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn>=0.30",
+  "pydantic>=2.7",
+  "numpy>=1.26",
+  "pandas>=2.2",
+]
+
+[project.optional-dependencies]
+# Lectura de rásteres reales (modo DATOS REALES de la API).
+geo = [
+  "rasterio>=1.3",
+  "xarray>=2024.6",
+  "rioxarray>=0.15",
+  "netCDF4>=1.7",
+  "h5netcdf>=1.3",
+  "h5py>=3.10",
+  "zarr>=2.18",
+  "dask[array]>=2024.6",
+  "pyproj>=3.6",
+]
+# Descarga y procesamiento de productos NASA.
+processing = [
+  "atlas-ambiental-mexico[geo]",
+  "earthaccess>=0.11",
+  "requests>=2.32",
+  "geopandas>=1.0",
+  "shapely>=2.0",
+]
+dev = [
+  "pytest>=8.0",
+  "httpx>=0.27",
+  "ruff>=0.6",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*", "processing*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM"]
+ignore = ["E501", "N818", "SIM108"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "processing"]
