@@ -23,14 +23,19 @@ describe("estado compartido del Atlas", () => {
     const start = { ...DEFAULT_STATE, date: { year: 2002, month: 6 } };
     const next = atlasReducer(start, { type: "setVariable", variable: "no2" });
     expect(next.date).toEqual({ year: 2004, month: 10 });
-    expect(next.notice).toContain("octubre de 2004");
+    expect(next.notice).toEqual({
+      kind: "clamped",
+      variable: "no2",
+      requested: { year: 2002, month: 6 },
+      shown: { year: 2004, month: 10 },
+    });
   });
 
   it("no avanza más allá del último mes disponible", () => {
     const start = { ...DEFAULT_STATE, variable: "precipitation" as const, date: { year: 2025, month: 9 } };
     const next = atlasReducer(start, { type: "stepMonth", step: 1 });
     expect(next.date).toEqual({ year: 2025, month: 9 });
-    expect(next.notice).toBeTruthy();
+    expect(next.notice).toEqual({ kind: "edge" });
   });
 
   it("avanza y retrocede de mes cruzando años", () => {

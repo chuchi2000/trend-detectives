@@ -80,9 +80,17 @@ class GridPayload(BaseModel):
     )
 
 
+class ImagePayload(BaseModel):
+    url: str = Field(description="Ruta del PNG del mapa, relativa a la API (empieza con /api)")
+    coordinates: list[list[float]] = Field(
+        description="Esquinas [lon, lat]: arriba-izq., arriba-der., abajo-der., abajo-izq."
+    )
+
+
 class LayerRef(BaseModel):
-    kind: Literal["grid", "tiles"]
+    kind: Literal["grid", "tiles", "image"]
     grid: GridPayload | None = None
+    image: ImagePayload | None = None
     tiles: list[str] | None = None
     tile_size: int | None = None
     bounds: list[float] | None = None
@@ -181,6 +189,40 @@ class Trend(BaseModel):
     interpretation: str
 
 
+class TrendMonthly(BaseModel):
+    """Tendencia sobre anomalías MENSUALES (app/services/trend_monthly.py).
+
+    Complementa a `Trend` (Theil–Sen sobre promedios anuales). Las cantidades
+    van en unidades de visualización (`unit`), p. ej. NO₂ en ×10¹⁵ molec/cm².
+    """
+
+    method: str
+    unit: str = Field(description="Unidad de la pendiente, p. ej. '°C por década'")
+    slope_per_decade: float = Field(description="Mínimos cuadrados sobre anomalías")
+    ci95: list[float] = Field(description="IC 95 % corregido por autocorrelación")
+    sen_slope_per_decade: float
+    pct_change_per_decade: float | None = Field(
+        description="None para temperatura (cero arbitrario)"
+    )
+    p_value: float = Field(description="Mann–Kendall con modificación de Hamed–Rao")
+    t_test_p_value: float = Field(description="Prueba t con n_eff = n(1−r₁)/(1+r₁)")
+    significant: bool
+    direction: str
+    lag1_autocorrelation: float
+    effective_months: float
+    mean: float
+    months: int
+    start: str
+    end: str
+    verdict: Literal["solida", "indicio", "variabilidad"]
+    verdict_label: str
+    sentence: str = Field(description="Resumen en lenguaje sencillo")
+    notes: list[str] = Field(default_factory=list)
+    dates: list[str] = Field(description="Meses usados en el análisis")
+    anomalies: list[float | None] = Field(description="Valor menos el promedio de ese mes del año")
+    trend_line: list[float] = Field(description="Recta y = ȳ + b·(t − t̄) en cada fecha")
+
+
 class TimeSeriesResponse(BaseModel):
     mode: DataMode
     variable: str
@@ -190,7 +232,42 @@ class TimeSeriesResponse(BaseModel):
     end: str
     points: list[SeriesPoint]
     trend: Trend | None
+    trend_monthly: TrendMonthly | None = None
     method: str
+
+
+class TrendMapSummary(BaseModel):
+    """Resumen sobre las celdas de México con tendencia calculable."""
+
+    n_pixels: int
+    fraction_up: float | None
+    fraction_significant_up: float | None
+    fraction_significant_down: float | None
+    median_slope_per_decade: float | None
+
+
+class TrendMapResponse(BaseModel):
+    """Tendencia por píxel de todo el mapa (app/services/trend_map.py).
+
+    Todas las listas siguen el orden de `grid.values`: fila por fila de norte a sur.
+    """
+
+    mode: DataMode
+    variable: str
+    start: str
+    end: str
+    unit: str = Field(description="Unidad de la pendiente, p. ej. '°C por década'")
+    relative: bool = Field(description="Si hay % por década (no en temperatura)")
+    grid: GridPayload = Field(description="Pendiente por década en unidades de visualización")
+    ci95_low: list[float | None]
+    ci95_high: list[float | None]
+    p_value: list[float | None] = Field(description="Prueba t corregida por autocorrelación")
+    significant: list[bool]
+    pct_change_per_decade: list[float | None] | None
+    summary: TrendMapSummary
+    method: str
+    notes: list[str] = Field(default_factory=list)
+    seconds: float = Field(description="Tiempo de cálculo (0 si vino de la caché)")
 
 
 class CorrelationResponse(BaseModel):

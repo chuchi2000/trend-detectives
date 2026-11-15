@@ -1,0 +1,174 @@
+{
+  "_comment": "English text for products.json. Only translatable fields live here; they are deep-merged over products.json (objects key by key, lists of objects item by item, other lists replaced). Numbers, dates, colors and IDs stay only in products.json.",
+  "audit_note": "Audit based on NASA's CMR catalog, the Earthdata/LP DAAC/GES DISC pages and the LAADS file specifications. Whether each month is actually available is confirmed by the local catalog (data/catalog) after downloading and processing.",
+  "comparison_period": {
+    "reason": "Period in which all four variables have data: NO₂ (OMI) starts in October 2004 and IMERG V07 Final ends in September 2025."
+  },
+  "common_grid": {
+    "rationale": "0.25° is the native resolution of OMNO2d, the coarsest product. It is the finest grid that invents no detail for any variable: finer products are aggregated with an area-weighted conservative mean and none is upsampled."
+  },
+  "variables": {
+    "precipitation": {
+      "name": "Precipitation",
+      "short_label": "Precipitation",
+      "unit": "mm/month",
+      "unit_long": "millimeters accumulated over the month",
+      "data_type": "Multi-satellite estimate calibrated with rain gauges (level-3 product)",
+      "product": {
+        "mission": "GPM (NASA/JAXA), with TRMM for the period before June 2014",
+        "instrument": "Constellation of microwave and infrared radiometers merged by the IMERG algorithm"
+      },
+      "temporal": { "native_resolution": "monthly" },
+      "layers": [
+        { "description": "Mean precipitation rate for the month (calibrated field, recommended for most uses)." },
+        { "description": "Estimated random error." },
+        { "units": "equivalent gauges per 2.5° box", "description": "Quality index." },
+        { "description": "Relative weight of the rain gauges." }
+      ],
+      "processing": {
+        "monthly_method": "The product is already monthly; no temporal aggregation.",
+        "conversion": "mm/month = (mm/h) × 24 × days in the month",
+        "quality_filter": "Fill values (-9999.9) and negative values are discarded. randomError and precipitationQualityIndex are kept as quality layers.",
+        "comparative": "Area-weighted conservative mean from 0.1° to 0.25°; a 0.25° cell needs at least 50 % of its area with valid data."
+      },
+      "display": {
+        "display_unit": "mm/month",
+        "words": { "low": "Less rain", "high": "More rain" }
+      },
+      "caveats": [
+        "Version 07 Final ends in September 2025 because its input products moved to version 08. October to December 2025 have no data until IMERG V08 Final is released; when it is, the whole record should be reprocessed rather than mixing versions.",
+        "Satellite precipitation estimates are less skillful over complex terrain, frozen surfaces and coastal areas.",
+        "Changes in the satellite constellation over time can introduce artifacts in multi-year studies."
+      ],
+      "sources": [
+        { "label": "CMR: GPM_3IMERGM V07 collection" },
+        { "label": "Earthdata: GPM_3IMERGM V07 (variables)" },
+        { "label": "GPM: IMERG V08 transition schedule" }
+      ]
+    },
+    "no2": {
+      "name": "Nitrogen dioxide (NO₂)",
+      "short_label": "NO₂",
+      "unit": "molec/cm²",
+      "unit_long": "molecules per square centimeter in the tropospheric column",
+      "data_type": "Satellite retrieval of the tropospheric column (daily level 3, averaged to monthly)",
+      "product": {
+        "alternative": {
+          "note": "Previous collection (last updated in 2019). The original proposal asked for V003; V004 is recommended because it is the current collection. Processing accepts both."
+        }
+      },
+      "temporal": { "native_resolution": "daily" },
+      "layers": [
+        { "description": "Cloud-screened tropospheric NO₂ column. Filters already applied by the producer: solar zenith angle 0–85°, cloud fraction < 30 %, column quality and row-anomaly flags, terrain reflectivity." },
+        { "units": "unitless", "description": "Weight of the cell in the producer's average (the official page does not describe it further)." }
+      ],
+      "processing": {
+        "monthly_method": "Arithmetic mean of the days with valid data in each cell. The number of valid days and the coverage (valid days ÷ days in the month) are stored.",
+        "conversion": "No conversion; shown in units of 10¹⁵ molec/cm².",
+        "quality_filter": "The cloud-screened variable is used. Fill values are discarded. A monthly cell needs at least 3 valid days (adjustable). Individual negative values are kept because removing them biases the mean upward.",
+        "comparative": "Already on the 0.25° grid; only clipped to Mexico."
+      },
+      "display": {
+        "words": { "low": "Less NO₂", "high": "More NO₂" }
+      },
+      "caveats": [
+        "The satellite measures the amount of NO₂ in the whole tropospheric air column; it is not the concentration breathed at street level.",
+        "Clouds prevent useful measurements: in the rainy season some cells have few valid days. Check the coverage before comparing months.",
+        "The 0.25° resolution (≈ 25 km) mixes cities and their surroundings in the same cell."
+      ],
+      "sources": [
+        { "label": "CMR: OMNO2d collections (V003 and V004)" },
+        { "label": "Earthdata: OMNO2d V004 (variables and filters)" },
+        { "label": "OMNO2 product README" }
+      ]
+    },
+    "evapotranspiration": {
+      "name": "Evapotranspiration",
+      "short_label": "Evapotranspiration",
+      "unit": "mm/month",
+      "unit_long": "millimeters of water evapotranspired in the month",
+      "data_type": "Level-4 modeled product (Penman–Monteith with MODIS data and meteorological reanalysis), gap-filled",
+      "product": {
+        "format": "HDF-EOS2 (downloaded through AppEEARS as GeoTIFF in geographic coordinates)",
+        "access": "AppEEARS (layers ET_500m and ET_QC_500m)"
+      },
+      "temporal": { "native_resolution": "8-day composite (the last one of the year lasts 5 or 6 days)" },
+      "spatial": {
+        "crs": "MODIS sinusoidal (AppEEARS delivers EPSG:4326)",
+        "coverage": "global (land surfaces)"
+      },
+      "layers": [
+        { "units": "kg/m²/8 days (= mm/8 days)", "description": "Sum of evapotranspiration over the days of the composite." },
+        { "description": "Copied from the input product MOD15A2H. Bit 0: 0 = main algorithm, 1 = other quality (backup or fill). Bits 3-4: cloud state. Bits 5-7: algorithm used." }
+      ],
+      "special_values": {
+        "32767": "fill",
+        "32766": "water bodies",
+        "32765": "barren or sparsely vegetated",
+        "32764": "perennial snow or ice",
+        "32763": "permanent wetlands",
+        "32762": "urban area",
+        "32761": "unclassified"
+      },
+      "processing": {
+        "monthly_method": "Each composite is spread evenly over its days (value ÷ days in the composite). The monthly total adds the days that fall in the month. If days are missing, it is scaled by days in the month ÷ covered days only when coverage is at least 80 %; below that, the month has no data.",
+        "conversion": "value × 0.1 = mm in the composite",
+        "quality_filter": "Fill and the special codes 32761–32766 (water, urban, desert, etc.) are removed: they are not zero evapotranspiration. Because the GF product already interpolated low-quality inputs, pixels are not discarded by ET_QC; instead the fraction of pixels with bit 0 = 1 is stored as a quality indicator. With --qc-estricto they are discarded.",
+        "comparative": "Area-weighted conservative mean from 500 m to 0.25°, with at least 50 % of the area valid."
+      },
+      "display": {
+        "display_unit": "mm/month",
+        "words": { "low": "Lower", "high": "Higher" }
+      },
+      "caveats": [
+        "It is a modeled product: it combines MODIS observations with meteorological reanalysis data.",
+        "Urban areas, unvegetated deserts and water bodies show no data because the product does not compute them.",
+        "The gap-filled (GF) version is published after each year ends.",
+        "The first Terra MODIS composite is from February 2000; because of the coverage rule, the first full month is March 2000."
+      ],
+      "sources": [
+        { "label": "Earthdata: MOD16A2GF V061" },
+        { "label": "LAADS: MOD16A2GF C6.1 file specification" },
+        { "label": "MOD16 V6.1 user guide" }
+      ]
+    },
+    "temperature": {
+      "name": "Land surface temperature",
+      "short_label": "Temperature",
+      "unit_long": "degrees Celsius (daytime land surface temperature)",
+      "data_type": "Satellite retrieval of land surface temperature (level 3, 8-day composite, averaged to monthly)",
+      "product": {
+        "format": "HDF-EOS2 (downloaded through AppEEARS as GeoTIFF in geographic coordinates)",
+        "access": "AppEEARS (layers LST_Day_1km and QC_Day)"
+      },
+      "temporal": { "native_resolution": "8-day composite" },
+      "spatial": {
+        "crs": "MODIS sinusoidal (AppEEARS delivers EPSG:4326)",
+        "coverage": "global (land surfaces)"
+      },
+      "layers": [
+        { "description": "Simple average of the MOD11A1 daily temperatures within the composite." },
+        { "description": "Bits 0-1: mandatory quality (00 good, 01 other quality, 10 no data due to clouds, 11 no data for other reasons). Bits 6-7: mean LST error (00 ≤ 1 K, 01 ≤ 2 K, 10 ≤ 3 K, 11 > 3 K)." }
+      ],
+      "processing": {
+        "monthly_method": "Mean of the composites weighted by the days of each composite that fall in the month. A month needs at least 50 % of its days covered by valid composites.",
+        "conversion": "value × 0.02 = K; K − 273.15 = °C",
+        "quality_filter": "Pixels with mandatory quality 00, or 01 with LST error ≤ 2 K, are accepted. 10, 11 and the value 0 (fill) are discarded.",
+        "comparative": "Area-weighted conservative mean from 1 km to 0.25°, with at least 50 % of the area valid."
+      },
+      "display": {
+        "words": { "low": "Cooler", "high": "Hotter" }
+      },
+      "caveats": [
+        "It is the temperature of the ground surface at the satellite's overpass time (morning), not the air temperature.",
+        "Terra stopped correcting its orbit in 2020 and its overpass time gets earlier every year. An earlier overpass records somewhat cooler surfaces, so daytime trends since 2020 should be read with caution.",
+        "Clouds prevent measurements: rainy months have fewer valid composites."
+      ],
+      "sources": [
+        { "label": "Earthdata: MOD11A2 V061" },
+        { "label": "LAADS: MOD11A2 C6.1 file specification (QC bits)" },
+        { "label": "Terra: orbital drift" }
+      ]
+    }
+  }
+}

@@ -5,6 +5,7 @@
  * agrega también la fuente; si no la tienes, no lo publiques.
  */
 import type { VariableId } from "@/config/variables";
+import type { Lang } from "@/lib/dates";
 
 export interface Source {
   label: string;
@@ -125,4 +126,98 @@ export const EDUCATIONAL: Record<VariableId, VariableContent> = {
       "Compara una zona con mucha vegetación y una zona desértica en el mismo mes. ¿Cuál se calienta más?",
     ],
   },
+};
+
+const EARTHDATA_IMERG_EN = { ...EARTHDATA_IMERG, label: "NASA Earthdata: monthly GPM IMERG" };
+const TERRA_DRIFT_EN = { ...TERRA_DRIFT, label: "NASA Terra: orbital drift" };
+
+const EDUCATIONAL_EN: Record<VariableId, VariableContent> = {
+  precipitation: {
+    whatWeSee:
+      "The amount of water that falls from the sky, as rain, hail or snow, added up over the whole month in each part of the country.",
+    howToRead:
+      "Each color is a range of millimeters accumulated over the month. One millimeter equals one liter of water per square meter of ground. Darker colors mean more rain.",
+    facts: [
+      {
+        text: "IMERG estimates rainfall over the whole planet every half hour in 0.1° boxes (about 10 km); the Atlas uses its monthly total.",
+        source: EARTHDATA_IMERG_EN,
+      },
+      {
+        text: "The product we use combines measurements from several satellites and, in its final version, is adjusted with monthly rain-gauge data on the ground.",
+        source: GPM_FINAL,
+      },
+    ],
+    questions: [
+      "Compare January with July. In which part of the country does rainfall change the most from one month to another?",
+      "Find the driest and the rainiest areas in September. What differences in terrain or distance to the sea are there between them?",
+      "Play the animation for a whole year. In which month does the rainy season start in the south?",
+    ],
+  },
+  no2: {
+    whatWeSee:
+      "The amount of nitrogen dioxide (NO₂), a polluting gas, in the column of air above each area, from the ground to the lower part of the atmosphere.",
+    howToRead:
+      "Darker colors mean more NO₂ in the air. Note: the satellite measures the whole air column, not what we breathe at street level. Areas without color did not have enough clear days to measure.",
+    facts: [
+      {
+        text: "In the lower atmosphere, NO₂ is produced by combustion and also by lightning; that is why it is used as an indicator of poor air quality.",
+        source: EARTHDATA_OMNO2,
+      },
+      {
+        text: "The OMI instrument cannot see through clouds: the map only uses days when the cloud fraction was below 30 %.",
+        source: EARTHDATA_OMNO2,
+      },
+    ],
+    questions: [
+      "Locate the country's largest cities. Do they match the darkest colors?",
+      "Compare a winter month with a summer month in the same city. Do you see differences?",
+      "Why do you think there are fewer valid days in the rainy season?",
+    ],
+  },
+  evapotranspiration: {
+    whatWeSee:
+      "The water that returns to the atmosphere from the soil and plants: evaporation from the soil plus transpiration from leaves.",
+    howToRead:
+      "Darker colors mean more water moved from the soil and vegetation into the air during the month. Cities, water bodies and unvegetated deserts show no data because the model does not compute them.",
+    facts: [
+      {
+        text: "This value is not measured directly: it is computed with a physical model (Penman–Monteith) that combines satellite observations with meteorological data.",
+        source: EARTHDATA_MOD16,
+      },
+      {
+        text: "The original product adds up evapotranspiration over 8 days; the Atlas spreads those days over the months they belong to.",
+        source: EARTHDATA_MOD16,
+      },
+    ],
+    questions: [
+      "Compare the evapotranspiration map with the precipitation map for the same month. Do they look alike?",
+      "In which regions does evapotranspiration stay high almost all year?",
+    ],
+  },
+  temperature: {
+    whatWeSee:
+      "How hot the ground surface is in the morning, when the satellite passes over. It is not the air temperature given in the weather forecast.",
+    howToRead:
+      "Darker red colors mean hotter surfaces. Areas without data were covered by clouds during most of the satellite's passes.",
+    facts: [
+      {
+        text: "Each value of the original product is the average of the daily temperatures over an 8-day period.",
+        source: EARTHDATA_MOD11,
+      },
+      {
+        text: "Since 2020 the Terra satellite passes earlier and earlier; an earlier overpass tends to record cooler surfaces.",
+        source: TERRA_DRIFT_EN,
+      },
+    ],
+    questions: [
+      "Why does the north of the country look hotter in May than the center, even though both are far from the sea?",
+      "Compare an area with lots of vegetation and a desert area in the same month. Which one heats up more?",
+    ],
+  },
+};
+
+/** Contenido educativo en cada idioma. */
+export const EDUCATIONAL_BY_LANG: Record<Lang, Record<VariableId, VariableContent>> = {
+  es: EDUCATIONAL,
+  en: EDUCATIONAL_EN,
 };

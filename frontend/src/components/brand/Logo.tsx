@@ -1,3 +1,5 @@
+import { useLanguage } from "@/i18n/language";
+
 /**
  * Símbolo del Atlas: un planeta atravesado por una franja de seis píxeles,
  * la huella de un satélite que mide la superficie.
@@ -23,11 +25,12 @@ export function LogoMark({ size = 34, theme = "claro" }: { size?: number; theme?
 }
 
 export function LogoLockup({ theme = "claro" }: { theme?: "claro" | "oscuro" }) {
+  const { t } = useLanguage();
   return (
     <span className="inline-flex items-center gap-3">
       <LogoMark theme={theme} />
       <span className="font-display text-[17px] leading-tight font-bold [font-stretch:112%]">
-        Atlas Ambiental de México
+        {t.appName}
       </span>
     </span>
   );

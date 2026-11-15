@@ -5,6 +5,7 @@ import { TimeSeriesChart } from "@/components/charts/TimeSeriesChart";
 import { LayerToggles } from "@/components/maps/LayerToggles";
 import { MapLegend } from "@/components/maps/MapLegend";
 import { PointReadout } from "@/components/maps/PointReadout";
+import { TrendForTarget, TrendSummary } from "@/components/maps/TrendSummary";
 import { RegionSelector } from "@/components/navigation/RegionSelector";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -13,42 +14,39 @@ import { StatusMessage } from "@/components/ui/status";
 import { Tabs } from "@/components/ui/tabs";
 import { regionParam } from "@/context/atlasState";
 import { useAtlas } from "@/context/AtlasStateContext";
-import { VARIABLES, VARIABLE_IDS, type VariableId } from "@/config/variables";
+import { VARIABLE_IDS, type VariableId } from "@/config/variables";
 import { useApi } from "@/hooks/useApi";
+import { useLanguage, useVariables } from "@/i18n/language";
 import { capitalize, formatYm, humanYm } from "@/lib/dates";
 import { formatCoord, formatNumber, formatPercent } from "@/lib/format";
+import { VERDICT_TONE, formatP } from "@/lib/trendFormat";
 import { cn } from "@/lib/utils";
 import { api, exportUrls, type Target } from "@/services/api";
-import type { LayerResponse, Stats, TrendVerdict } from "@/services/types";
-
-const VERDICT_TONE: Record<TrendVerdict, "accent" | "warning" | "neutral"> = {
-  solida: "accent",
-  indicio: "warning",
-  variabilidad: "neutral",
-};
-
-function formatP(p: number): string {
-  return p < 0.001 ? "< 0.001" : p.toFixed(3);
-}
+import type { LayerResponse, Stats } from "@/services/types";
 
 function useTarget(): { target: Target; label: string } {
   const { state } = useAtlas();
+  const { lang, t } = useLanguage();
   if (state.point) {
-    return { target: { lat: state.point.lat, lon: state.point.lon }, label: `punto ${formatCoord(state.point.lat, state.point.lon)}` };
+    return {
+      target: { lat: state.point.lat, lon: state.point.lon },
+      label: t.scientific.point(formatCoord(state.point.lat, state.point.lon, lang)),
+    };
   }
-  return { target: { region: regionParam(state.region) }, label: state.region ? state.region.name : "todo México" };
+  return { target: { region: regionParam(state.region) }, label: state.region ? state.region.name : t.scientific.allMexico };
 }
 
 function StatGrid({ stats, variable }: { stats: Stats; variable: VariableId }) {
-  const v = VARIABLES[variable];
+  const { t } = useLanguage();
+  const v = useVariables()[variable];
   const fmt = (x: number | null) => (x === null ? "—" : formatNumber(x / v.display.scale, 2));
   const rows: Array<[string, string]> = [
-    ["Promedio", fmt(stats.mean)],
-    ["Mediana", fmt(stats.median)],
-    ["Mínimo", fmt(stats.min)],
-    ["Máximo", fmt(stats.max)],
-    ["Desv. estándar", fmt(stats.std)],
-    ["Cobertura válida", formatPercent(stats.coverage)],
+    [t.scientific.mean, fmt(stats.mean)],
+    [t.scientific.median, fmt(stats.median)],
+    [t.scientific.min, fmt(stats.min)],
+    [t.scientific.max, fmt(stats.max)],
+    [t.scientific.std, fmt(stats.std)],
+    [t.scientific.coverage, formatPercent(stats.coverage)],
   ];
   return (
     <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-borde sm:grid-cols-3">
@@ -62,44 +60,50 @@ function StatGrid({ stats, variable }: { stats: Stats; variable: VariableId }) {
   );
 }
 
-function StatisticsSection() {
+function StatisticsSection({ theme }: { theme: "claro" | "oscuro" }) {
   const { state } = useAtlas();
+  const { lang, t } = useLanguage();
+  const variables = useVariables();
   const region = regionParam(state.region);
   const result = useApi(
     (signal) => api.statistics(state.variable, state.date.year, state.date.month, region, signal),
     [state.variable, state.date.year, state.date.month, region],
   );
-  const v = VARIABLES[state.variable];
+  const v = variables[state.variable];
   return (
     <div className="flex flex-col gap-4 p-4">
       <RegionSelector />
       <h3 className="text-base font-bold">
-        {v.name}, {humanYm(state.date)} — {state.region?.name ?? "todo México"}
+        {v.name}, {humanYm(state.date, lang)} — {state.region?.name ?? t.scientific.allMexico}
         <span className="ml-1 font-normal text-texto-suave">({v.display.displayUnit})</span>
       </h3>
-      {result.status === "loading" && !result.data && <StatusMessage kind="loading" title="Calculando estadísticas…" />}
-      {result.status === "error" && <StatusMessage kind="error" title="Sin estadísticas">{result.error.message}</StatusMessage>}
+      {result.status === "loading" && !result.data && <StatusMessage kind="loading" title={t.scientific.computingStats} />}
+      {result.status === "error" && <StatusMessage kind="error" title={t.scientific.noStats}>{result.error.message}</StatusMessage>}
       {result.data && (
         <>
           <StatGrid stats={result.data.stats} variable={state.variable} />
           <p className="text-xs leading-relaxed text-texto-suave">
-            {result.data.stats.n_valid} de {result.data.stats.n_cells} celdas con dato. {result.data.method}
+            {t.scientific.cellsWithData(result.data.stats.n_valid, result.data.stats.n_cells)} {result.data.method}
           </p>
           {result.data.extremes.max && result.data.extremes.min && (
             <p className="text-sm">
-              Máximo en {formatCoord(result.data.extremes.max.lat, result.data.extremes.max.lon)}; mínimo en{" "}
-              {formatCoord(result.data.extremes.min.lat, result.data.extremes.min.lon)}.
+              {t.scientific.extremes(
+                formatCoord(result.data.extremes.max.lat, result.data.extremes.max.lon, lang),
+                formatCoord(result.data.extremes.min.lat, result.data.extremes.min.lon, lang),
+              )}
             </p>
           )}
         </>
       )}
-      <PointReadout />
+      {state.mapView === "tendencia" ? <TrendForTarget theme={theme} detailed /> : <PointReadout />}
     </div>
   );
 }
 
 function SeriesSection({ theme }: { theme: "claro" | "oscuro" }) {
   const { state } = useAtlas();
+  const { t } = useLanguage();
+  const variables = useVariables();
   const { target, label } = useTarget();
   const [second, setSecond] = useState<VariableId | "">("");
   const key = JSON.stringify(target);
@@ -112,40 +116,45 @@ function SeriesSection({ theme }: { theme: "claro" | "oscuro" }) {
     second ? (signal) => api.correlation(state.variable, second, target, signal) : null,
     [second, state.variable, key],
   );
-  const v = VARIABLES[state.variable];
+  const v = variables[state.variable];
   const trend = series.data?.trend;
+  const intro = t.scientific.seriesIntro(label);
   return (
     <div className="flex flex-col gap-4 p-4">
       <p className="text-sm text-texto-suave">
-        Serie mensual de <strong className="text-texto">{v.name}</strong> en {label}. Haz clic en el mapa para cambiar
-        de punto, o quita el punto para ver la región.
+        {intro.before}
+        <strong className="text-texto">{v.name}</strong>
+        {intro.after}
       </p>
-      {series.status === "loading" && !series.data && <StatusMessage kind="loading" title="Cargando la serie…" />}
+      {series.status === "loading" && !series.data && <StatusMessage kind="loading" title={t.scientific.loadingSeries} />}
       {series.status === "error" && <StatusMessage kind="error">{series.error.message}</StatusMessage>}
       {series.data && (
         <TimeSeriesChart series={series.data} second={secondSeries.data} theme={theme} />
       )}
       {trend && (
-        <section className="rounded-xl bg-panel p-3 text-sm" aria-label="Tendencia">
+        <section className="rounded-xl bg-panel p-3 text-sm" aria-label={t.scientific.annualTrendTitle}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="font-display font-bold">Tendencia</h4>
+            <h4 className="font-display font-bold">{t.scientific.annualTrendTitle}</h4>
             <Badge tone={VERDICT_TONE[trend.verdict]}>{trend.verdict_label}</Badge>
           </div>
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 cifras">
-            <dt className="text-texto-suave">Pendiente</dt>
+            <dt className="text-texto-suave">{t.scientific.slope}</dt>
             <dd className="font-display font-semibold">
-              {formatNumber(trend.slope_per_decade / v.display.scale, 2)} {v.display.displayUnit} por década
+              {formatNumber(trend.slope_per_decade / v.display.scale, 2)} {v.display.displayUnit} {t.common.perDecade}
             </dd>
-            <dt className="text-texto-suave">IC {Math.round(trend.confidence * 100)} %</dt>
+            <dt className="text-texto-suave">{t.scientific.ci(Math.round(trend.confidence * 100))}</dt>
             <dd>
-              {formatNumber(trend.slope_ci_low_per_decade / v.display.scale, 2)} a{" "}
-              {formatNumber(trend.slope_ci_high_per_decade / v.display.scale, 2)} {v.display.displayUnit} por década
+              {formatNumber(trend.slope_ci_low_per_decade / v.display.scale, 2)} {t.common.to}{" "}
+              {formatNumber(trend.slope_ci_high_per_decade / v.display.scale, 2)} {v.display.displayUnit} {t.common.perDecade}
             </dd>
-            <dt className="text-texto-suave">Mann–Kendall</dt>
+            <dt className="text-texto-suave">{t.scientific.mannKendall}</dt>
             <dd>
-              p = {formatP(trend.p_value)} · {trend.n_years} años
+              p = {formatP(trend.p_value)} · {trend.n_years} {t.scientific.years}
               {trend.autocorrelation_factor > 1.0001 && (
-                <span className="text-texto-suave"> (sin corregir: p = {formatP(trend.p_value_uncorrected)})</span>
+                <span className="text-texto-suave">
+                  {" "}
+                  ({t.scientific.uncorrected}: p = {formatP(trend.p_value_uncorrected)})
+                </span>
               )}
             </dd>
           </dl>
@@ -153,42 +162,45 @@ function SeriesSection({ theme }: { theme: "claro" | "oscuro" }) {
           <p className="mt-1 text-xs text-texto-suave">{trend.method}.</p>
         </section>
       )}
+      {series.data?.trend_monthly && (
+        <TrendSummary variable={state.variable} trend={series.data.trend_monthly} theme={theme} detailed />
+      )}
       {series.data && !trend && (
         <p className="text-xs text-texto-suave">
-          La tendencia se calcula con al menos 8 años completos (9 meses válidos o más por año).
+          {t.scientific.trendNeedsYears}
         </p>
       )}
       <Select
-        label="Comparar con otra variable"
+        label={t.scientific.compareWith}
         value={second}
         onChange={(e) => setSecond(e.target.value as VariableId | "")}
         options={[
-          { value: "", label: "Ninguna" },
-          ...VARIABLE_IDS.filter((id) => id !== state.variable).map((id) => ({ value: id, label: VARIABLES[id].name })),
+          { value: "", label: t.scientific.none },
+          ...VARIABLE_IDS.filter((id) => id !== state.variable).map((id) => ({ value: id, label: variables[id].name })),
         ]}
       />
       {correlation.status === "error" && <StatusMessage kind="error">{correlation.error.message}</StatusMessage>}
       {correlation.data && (
         <section className="rounded-xl bg-panel p-3 text-sm">
-          <h4 className="font-display font-bold">Correlación de anomalías mensuales</h4>
+          <h4 className="font-display font-bold">{t.scientific.correlationTitle}</h4>
           <p className="mt-1 font-display font-semicondensada cifras">
             r = {correlation.data.r === null ? "—" : correlation.data.r.toFixed(2)}
             {correlation.data.ci_low !== null && correlation.data.ci_high !== null && (
               <>
                 {" "}
-                (IC {Math.round(correlation.data.confidence * 100)} %: {correlation.data.ci_low.toFixed(2)} a{" "}
+                ({t.scientific.ci(Math.round(correlation.data.confidence * 100))}: {correlation.data.ci_low.toFixed(2)}{" "}
+                {t.common.to}{" "}
                 {correlation.data.ci_high.toFixed(2)})
               </>
             )}{" "}
             · p = {correlation.data.p_value === null ? "—" : formatP(correlation.data.p_value)}
           </p>
           <p className="mt-1 text-xs text-texto-suave cifras">
-            {correlation.data.n} meses
-            {correlation.data.n_effective !== null &&
-              ` · equivalen a ≈ ${Math.round(correlation.data.n_effective)} datos independientes por la autocorrelación`}
+            {correlation.data.n} {t.scientific.months}
+            {correlation.data.n_effective !== null && t.scientific.independent(Math.round(correlation.data.n_effective))}
           </p>
           <p className="mt-1 text-xs leading-relaxed text-texto-suave">
-            {correlation.data.start} a {correlation.data.end}. {correlation.data.method} {correlation.data.note}
+            {correlation.data.start} {t.common.to} {correlation.data.end}. {correlation.data.method} {correlation.data.note}
           </p>
         </section>
       )}
@@ -198,6 +210,8 @@ function SeriesSection({ theme }: { theme: "claro" | "oscuro" }) {
 
 function CompareSection() {
   const { state, dispatch } = useAtlas();
+  const { lang, t } = useLanguage();
+  const variables = useVariables();
   const region = regionParam(state.region);
   const a = formatYm(state.compare.date);
   const b = formatYm(state.date);
@@ -205,19 +219,19 @@ function CompareSection() {
     state.compare.enabled ? (signal) => api.compare(state.variable, a, b, region, signal) : null,
     [state.compare.enabled, state.variable, a, b, region],
   );
-  const v = VARIABLES[state.variable];
+  const v = variables[state.variable];
   if (!state.compare.enabled) {
     return (
       <div className="flex flex-col gap-3 p-4">
         <p className="text-sm text-texto-suave">
-          Activa “Comparar” en los controles de tiempo para elegir un segundo mes y ver la diferencia.
+          {t.scientific.compareHint}
         </p>
         <button
           type="button"
           className={buttonVariants({ variant: "primary", size: "md" })}
           onClick={() => dispatch({ type: "toggleCompare" })}
         >
-          Activar comparación
+          {t.scientific.enableCompare}
         </button>
       </div>
     );
@@ -230,23 +244,23 @@ function CompareSection() {
         <>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <h4 className="mb-2 font-display text-sm font-bold">A · {capitalize(humanYm(result.data.a.date))}</h4>
+              <h4 className="mb-2 font-display text-sm font-bold">A · {capitalize(humanYm(result.data.a.date, lang))}</h4>
               <StatGrid stats={result.data.a.stats} variable={state.variable} />
             </div>
             <div>
-              <h4 className="mb-2 font-display text-sm font-bold">B · {capitalize(humanYm(result.data.b.date))}</h4>
+              <h4 className="mb-2 font-display text-sm font-bold">B · {capitalize(humanYm(result.data.b.date, lang))}</h4>
               <StatGrid stats={result.data.b.stats} variable={state.variable} />
             </div>
           </div>
           <p className="text-sm">
-            Diferencia media (B − A):{" "}
+            {t.scientific.meanDifference}{" "}
             <strong className="font-display cifras">
               {result.data.difference_mean === null
                 ? "—"
                 : `${formatNumber(result.data.difference_mean / v.display.scale, 2)} ${v.display.displayUnit}`}
             </strong>
-            {result.data.percent_change !== null && ` (${formatNumber(result.data.percent_change, 1)} %)`}. Aumentó en{" "}
-            {formatPercent(result.data.cells_increase_fraction)} de las celdas comparables.
+            {result.data.percent_change !== null && ` (${formatNumber(result.data.percent_change, 1)} %)`}.{" "}
+            {t.scientific.increasedIn(formatPercent(result.data.cells_increase_fraction))}
           </p>
           <p className="text-xs text-texto-suave">{result.data.method}</p>
         </>
@@ -257,22 +271,26 @@ function CompareSection() {
 
 function MetadataSection({ layer }: { layer: LayerResponse | null }) {
   const { state } = useAtlas();
+  const { lang, t } = useLanguage();
   const meta = useApi((signal) => api.metadata(state.variable, signal), [state.variable]);
   if (meta.status === "error") return <StatusMessage kind="error" className="m-4">{meta.error.message}</StatusMessage>;
-  if (!meta.data) return <StatusMessage kind="loading" className="m-4" title="Cargando metadatos…" />;
+  if (!meta.data) return <StatusMessage kind="loading" className="m-4" title={t.scientific.loadingMetadata} />;
   const info = meta.data.variable;
   const product = info.product as Record<string, string>;
   const rows: Array<[string, string]> = [
-    ["Producto", `${product.short_name} versión ${product.version}`],
-    ["Título", product.title ?? ""],
-    ["Misión e instrumento", `${product.mission}; ${product.instrument}`],
-    ["Proveedor", product.provider ?? ""],
+    [t.scientific.product, `${product.short_name} ${t.scientific.version} ${product.version}`],
+    [t.scientific.title, product.title ?? ""],
+    [t.scientific.missionInstrument, `${product.mission}; ${product.instrument}`],
+    [t.scientific.provider, product.provider ?? ""],
     ["DOI", product.doi ?? ""],
-    ["Tipo de dato", info.data_type],
-    ["Resolución espacial", String(info.spatial.native_resolution)],
-    ["Resolución temporal", String(info.temporal.native_resolution)],
-    ["Disponible", `${humanYm(info.availability.start)} a ${humanYm(info.availability.end)}`],
-    ["Unidad", `${info.unit} (${info.unit_long})`],
+    [t.scientific.dataType, info.data_type],
+    [t.scientific.spatialResolution, String(info.spatial.native_resolution)],
+    [t.scientific.temporalResolution, String(info.temporal.native_resolution)],
+    [
+      t.scientific.available,
+      `${humanYm(info.availability.start, lang)} ${t.common.to} ${humanYm(info.availability.end, lang)}`,
+    ],
+    [t.common.unit, `${info.unit} (${info.unit_long})`],
   ];
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -286,14 +304,14 @@ function MetadataSection({ layer }: { layer: LayerResponse | null }) {
       </dl>
       {layer && (
         <section className="flex flex-col gap-2">
-          <h4 className="font-display font-bold">Calidad de la capa mostrada</h4>
+          <h4 className="font-display font-bold">{t.scientific.layerQuality}</h4>
           <div className="flex flex-wrap gap-2">
             {layer.quality.flags.map((flag) => (
               <Badge key={flag} tone={flag === "demo" ? "demo" : "warning"}>
-                {flag === "demo" ? "Datos simulados" : flag === "deriva_orbital_terra" ? "Deriva orbital de Terra" : flag}
+                {flag === "demo" ? t.scientific.simulatedData : flag === "deriva_orbital_terra" ? t.common.terraDrift : flag}
               </Badge>
             ))}
-            <Badge tone="accent">Cobertura {formatPercent(layer.quality.coverage)}</Badge>
+            <Badge tone="accent">{t.scientific.coverageBadge(formatPercent(layer.quality.coverage))}</Badge>
           </div>
           {layer.quality.notes.map((note) => (
             <p key={note} className="text-sm text-texto-suave">{note}</p>
@@ -301,19 +319,19 @@ function MetadataSection({ layer }: { layer: LayerResponse | null }) {
         </section>
       )}
       <section className="flex flex-col gap-2">
-        <h4 className="font-display font-bold">Procesamiento</h4>
+        <h4 className="font-display font-bold">{t.scientific.processing}</h4>
         {Object.entries(info.processing).map(([key, value]) => (
           <p key={key} className="text-sm leading-relaxed text-texto-suave">{value}</p>
         ))}
       </section>
       <section className="flex flex-col gap-2">
-        <h4 className="font-display font-bold">Advertencias</h4>
+        <h4 className="font-display font-bold">{t.scientific.caveats}</h4>
         <ul className="flex list-disc flex-col gap-1 pl-5 text-sm leading-relaxed">
           {info.caveats.map((c) => <li key={c}>{c}</li>)}
         </ul>
       </section>
       <section className="flex flex-col gap-1">
-        <h4 className="font-display font-bold">Fuentes (auditoría del {meta.data.audit_date})</h4>
+        <h4 className="font-display font-bold">{t.scientific.sources(meta.data.audit_date)}</h4>
         {info.sources.map((s) => (
           <a key={s.url} href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm">
             {s.label} <ExternalLink aria-hidden="true" className="size-3.5" />
@@ -326,17 +344,18 @@ function MetadataSection({ layer }: { layer: LayerResponse | null }) {
 
 function ExportSection({ mode }: { mode: "demo" | "real" | null }) {
   const { state } = useAtlas();
+  const { lang, t } = useLanguage();
   const { target, label } = useTarget();
   const region = regionParam(state.region);
   const links = [
-    { label: `Serie de tiempo (${label}) en CSV`, href: exportUrls.timeseriesCsv(state.variable, target), enabled: true },
+    { label: t.scientific.exportSeries(label), href: exportUrls.timeseriesCsv(state.variable, target), enabled: true },
     {
-      label: `Estadísticas de ${humanYm(state.date)} en CSV`,
+      label: t.scientific.exportStats(humanYm(state.date, lang)),
       href: exportUrls.statisticsCsv(state.variable, state.date.year, state.date.month, region),
       enabled: true,
     },
     {
-      label: `Mapa de ${humanYm(state.date)} en GeoTIFF (resolución nativa)`,
+      label: t.scientific.exportRaster(humanYm(state.date, lang)),
       href: exportUrls.raster(state.variable, state.date.year, state.date.month),
       enabled: mode === "real",
     },
@@ -344,8 +363,8 @@ function ExportSection({ mode }: { mode: "demo" | "real" | null }) {
   return (
     <div className="flex flex-col gap-3 p-4">
       {mode === "demo" && (
-        <StatusMessage kind="info" title="Exportaciones de demostración">
-          Los CSV incluyen un encabezado que indica que los valores son simulados. El GeoTIFF solo existe con datos reales.
+        <StatusMessage kind="info" title={t.scientific.exportDemoTitle}>
+          {t.scientific.exportDemoText}
         </StatusMessage>
       )}
       {links.map((link) =>
@@ -362,7 +381,7 @@ function ExportSection({ mode }: { mode: "demo" | "real" | null }) {
         ),
       )}
       <p className="text-xs text-texto-suave">
-        La imagen del mapa se descarga con el botón junto al mapa; cada gráfica tiene su propio botón de descarga en PNG.
+        {t.scientific.exportHint}
       </p>
     </div>
   );
@@ -372,23 +391,24 @@ function ExportSection({ mode }: { mode: "demo" | "real" | null }) {
 export function ScientificPanel({ layer, theme, mode }: { layer: LayerResponse | null; theme: "claro" | "oscuro"; mode: "demo" | "real" | null }) {
   const [tab, setTab] = useState("estadisticas");
   const { state } = useAtlas();
+  const { t } = useLanguage();
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-col gap-3 border-b border-borde p-4">
         <MapLegend variable={state.variable} mode="cientifico" />
       </div>
       <Tabs
-        label="Herramientas de análisis"
+        label={t.scientific.tabsLabel}
         value={tab}
         onChange={setTab}
         className="min-h-0 flex-1"
         items={[
-          { id: "estadisticas", label: "Estadísticas", content: <StatisticsSection /> },
-          { id: "series", label: "Series", content: <SeriesSection theme={theme} /> },
-          { id: "comparar", label: "Comparar", content: <CompareSection /> },
-          { id: "metadatos", label: "Metadatos", content: <MetadataSection layer={layer} /> },
-          { id: "exportar", label: "Exportar", content: <ExportSection mode={mode} /> },
-          { id: "capas", label: "Capas", content: <div className="p-4"><LayerToggles /></div> },
+          { id: "estadisticas", label: t.scientific.statistics, content: <StatisticsSection theme={theme} /> },
+          { id: "series", label: t.scientific.series, content: <SeriesSection theme={theme} /> },
+          { id: "comparar", label: t.scientific.compare, content: <CompareSection /> },
+          { id: "metadatos", label: t.scientific.metadata, content: <MetadataSection layer={layer} /> },
+          { id: "exportar", label: t.scientific.export, content: <ExportSection mode={mode} /> },
+          { id: "capas", label: t.scientific.layers, content: <div className="p-4"><LayerToggles /></div> },
         ]}
       />
     </div>

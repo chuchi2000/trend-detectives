@@ -170,3 +170,64 @@ def test_unexpected_coordinates_are_rejected(tmp_path):
 def test_non_geojson_response_is_rejected(tmp_path):
     with pytest.raises(RuntimeError, match="FeatureCollection"):
         svc.build(out_dir=tmp_path, fetch=lambda url: {"error": "x"}, states=["09"], pause=0)
+
+
+def test_http_fetch_retries_cut_connection_and_reads_gzip(monkeypatch):
+    """Reproduce el corte del INEGI: respuesta 'chunked' que se interrumpe a la mitad."""
+    import gzip
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    payload = json.dumps(fake_inegi("x/mgee/24")).encode("utf-8")
+    requests_seen: list[str] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def log_message(self, *args):  # silencio en las pruebas
+            pass
+
+        def do_GET(self):
+            requests_seen.append(self.headers.get("Accept-Encoding", ""))
+            if len(requests_seen) == 1:
+                # Primer intento: empieza a enviar y corta la conexión (IncompleteRead).
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Transfer-Encoding", "chunked")
+                self.end_headers()
+                part = payload[: len(payload) // 2]
+                self.wfile.write(f"{len(part):x}\r\n".encode() + part + b"\r\n")
+                self.wfile.flush()
+                self.close_connection = True
+                return
+            body = gzip.compress(payload)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    monkeypatch.setattr(svc.time, "sleep", lambda s: None)
+    try:
+        data = svc.http_fetch(f"http://127.0.0.1:{server.server_port}/mgee/24", timeout=10)
+    finally:
+        server.shutdown()
+    assert data["features"][0]["properties"]["nomgeo"] == "San Luis Potosí"
+    assert len(requests_seen) == 2
+    assert requests_seen[1] == "gzip"
+
+
+def test_http_fetch_gives_clear_message_when_server_keeps_failing(monkeypatch):
+    import http.client
+
+    def always_cut(*args, **kwargs):
+        raise http.client.IncompleteRead(b"x")
+
+    monkeypatch.setattr(svc.urllib.request, "urlopen", always_cut)
+    monkeypatch.setattr(svc.time, "sleep", lambda s: None)
+    with pytest.raises(RuntimeError, match="vuelve a ejecutar"):
+        svc.http_fetch("http://ejemplo/mgee/01", retries=3)

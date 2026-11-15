@@ -13,35 +13,50 @@ from pathlib import Path
 from typing import Any
 
 from app.core.errors import DateUnavailable, NotFound
+from app.core.i18n import deep_merge, get_lang, tr
 from app.services.dates import format_ym, human_ym, parse_ym, ym_index
 
 VARIABLE_IDS = ("precipitation", "no2", "evapotranspiration", "temperature")
 
 
 class ProductCatalog:
-    def __init__(self, data: dict[str, Any]) -> None:
+    def __init__(self, data: dict[str, Any], english: dict[str, Any] | None = None) -> None:
         self._data = data
         self._variables: dict[str, dict[str, Any]] = data["variables"]
+        # Textos en inglés (products.en.json) mezclados una sola vez sobre el original.
+        self._en = deep_merge(data, english) if english else data
 
     @classmethod
     def from_file(cls, path: Path) -> ProductCatalog:
-        return cls(json.loads(path.read_text(encoding="utf-8")))
+        english_path = path.with_name(f"{path.stem}.en{path.suffix}")
+        english = (
+            json.loads(english_path.read_text(encoding="utf-8")) if english_path.exists() else None
+        )
+        return cls(json.loads(path.read_text(encoding="utf-8")), english)
+
+    def _localized(self) -> dict[str, Any]:
+        return self._en if get_lang() == "en" else self._data
 
     # -- consultas ---------------------------------------------------------
     @property
     def raw(self) -> dict[str, Any]:
-        return self._data
+        """products.json completo, con los textos en el idioma de la petición."""
+        return self._localized()
 
     @property
     def variable_ids(self) -> list[str]:
         return sorted(self._variables, key=lambda v: self._variables[v]["order"])
 
     def get(self, variable: str) -> dict[str, Any]:
-        try:
-            return self._variables[variable]
-        except KeyError as exc:
+        if variable not in self._variables:
             valid = ", ".join(self.variable_ids)
-            raise NotFound(f"Variable '{variable}' desconocida. Usa una de: {valid}.") from exc
+            raise NotFound(
+                tr(
+                    f"Variable '{variable}' desconocida. Usa una de: {valid}.",
+                    f"Unknown variable '{variable}'. Use one of: {valid}.",
+                )
+            )
+        return self._localized()["variables"][variable]
 
     def availability(self, variable: str) -> tuple[str, str]:
         temporal = self.get(variable)["temporal"]
@@ -73,8 +88,12 @@ class ProductCatalog:
         start, end = self.availability(variable)
         name = self.get(variable)["name"]
         raise DateUnavailable(
-            f"{name} no tiene datos para {human_ym(format_ym(year, month))}. "
-            f"Hay datos de {human_ym(start)} a {human_ym(end)}."
+            tr(
+                f"{name} no tiene datos para {human_ym(format_ym(year, month))}. "
+                f"Hay datos de {human_ym(start)} a {human_ym(end)}.",
+                f"{name} has no data for {human_ym(format_ym(year, month))}. "
+                f"Data are available from {human_ym(start)} to {human_ym(end)}.",
+            )
         )
 
     def common_available_range(self, variables: list[str]) -> tuple[str, str] | None:

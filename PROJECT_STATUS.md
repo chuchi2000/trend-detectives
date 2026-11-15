@@ -27,6 +27,7 @@ Earthdata.
 | 8 | Utilidades de procesamiento (QC, escala, compuestos→mes, re-malla) | ✅ | Pruebas unitarias |
 | 9 | Pipelines por variable (descarga + proceso) | 🟡 | Sin ejecutar contra NASA |
 | 10 | Nivel comparativo 0.25° | 🟡 | Re-malla probada; el pipeline completo no |
+| 10b | Descarga rápida (Earth Engine + Harmony) | 🟡 | Lógica probada (mallas, solicitudes, compuestos, agrupación); falta la primera ejecución real |
 | 11 | Límites INEGI | 🟡 | Descarga desde el servicio web del INEGI con un comando: probada con respuestas simuladas en su formato; falta la ejecución real. Método con shapefiles sin probar |
 | 12 | Frontend: bienvenida, mapa, modos, línea de tiempo | ✅ | Verificado en navegador (ver abajo) |
 | 13 | Funciones avanzadas | ✅ en demo | Comparación, tendencia, correlación, estadísticas por región, CSV, PNG del mapa, animación, consulta por coordenada |
@@ -41,7 +42,7 @@ descargar de NASA. Por eso:
 
 **Probado**
 
-- `pytest` en `backend/`: **60 pruebas pasan**. Cubren conversión de unidades, filtros QC
+- `pytest` en `backend/`: **76 pruebas pasan**. Cubren conversión de unidades, filtros QC
   por bits, reparto de compuestos de 8 días entre meses, mínimos de cobertura, re-malla
   conservativa (conserva el promedio), estadísticas ponderadas, Theil–Sen, Mann–Kendall,
   Pearson sobre anomalías, disponibilidad por producto, máscaras de estados y municipios,
@@ -83,6 +84,7 @@ descargar de NASA. Por eso:
 | Correlación sobre anomalías, con tamaño de muestra efectivo e IC 95 % | Evita correlaciones espurias por el ciclo estacional y valores p optimistas |
 | Tendencia: Mann–Kendall corregido por autocorrelación + IC 95 % de la pendiente de Sen | Separa tendencias sólidas de la variabilidad natural; validado con simulaciones (`metadata/documentation/metodos-estadisticos.md`) |
 | Componentes UI propios con convenciones shadcn | Sin dependencias de Radix; mismo patrón `cva` + `cn` |
+| Mapa real generado por la API (`ATLAS_MAP_MODE=imagen`) | Elimina la dependencia de Docker/TiTiler en Windows; filas ajustadas a Mercator (sin esto el centro se desplaza decenas de km). TiTiler sigue disponible como opción |
 
 ## Pendientes
 

@@ -3,18 +3,13 @@ import { useEffect, useState } from "react";
 
 import { LogoLockup } from "@/components/brand/Logo";
 import { MosaicMap } from "@/components/brand/MosaicMap";
+import { LanguageSwitch } from "@/components/navigation/LanguageSwitch";
 import { VariableIcon } from "@/components/icons/VariableIcon";
 import { Button } from "@/components/ui/button";
-import { STUDY_PERIOD, VARIABLES, VARIABLE_IDS, type Mode, type VariableId } from "@/config/variables";
+import { STUDY_PERIOD, VARIABLE_IDS, type Mode, type VariableId } from "@/config/variables";
+import { useLanguage, useVariables } from "@/i18n/language";
 import { humanYm, parseYm } from "@/lib/dates";
 import { cn } from "@/lib/utils";
-
-const DESCRIPTIONS: Record<VariableId, string> = {
-  precipitation: "Cuánta agua cae del cielo, como lluvia, granizo o nieve, en cada región.",
-  no2: "Gas que se forma al quemar combustibles y también durante las tormentas eléctricas.",
-  evapotranspiration: "Agua que regresa a la atmósfera desde el suelo y las plantas.",
-  temperature: "Qué tan caliente está la superficie del terreno. No es la temperatura del aire.",
-};
 
 /** Posición (0–100 %) de un mes dentro del periodo de estudio 2000–2025. */
 function position(ym: string, edge: "start" | "end"): number {
@@ -29,6 +24,8 @@ function position(ym: string, edge: "start" | "end"): number {
  * opciones de acceso, mapa-mosaico ilustrativo y cobertura real de cada producto.
  */
 export function WelcomePage({ onEnter }: { onEnter: (mode: Mode) => void }) {
+  const { lang, t } = useLanguage();
+  const variables = useVariables();
   const [variable, setVariable] = useState<VariableId>("precipitation");
   const [auto, setAuto] = useState(() => !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 
@@ -40,15 +37,16 @@ export function WelcomePage({ onEnter }: { onEnter: (mode: Mode) => void }) {
     return () => window.clearInterval(timer);
   }, [auto]);
 
-  const v = VARIABLES[variable];
+  const v = variables[variable];
   return (
     <div data-tema="claro" className="min-h-dvh bg-papel text-tinta [container-type:inline-size]">
       <header className="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-10">
         <LogoLockup />
-        <nav aria-label="Información del proyecto" className="flex gap-6 text-[16px]">
+        <nav aria-label={t.welcome.navLabel} className="flex flex-wrap items-center gap-6 text-[16px]">
           <a href="#fuentes" className="py-2.5">
-            Fuentes de datos
+            {t.welcome.sourcesLink}
           </a>
+          <LanguageSwitch className="bg-superficie" />
         </nav>
       </header>
 
@@ -57,16 +55,21 @@ export function WelcomePage({ onEnter }: { onEnter: (mode: Mode) => void }) {
           <div className="flex flex-col gap-4">
             <h1
               id="titulo-atlas"
-              className="text-[clamp(40px,5cqi,70px)] leading-[0.96] font-extrabold tracking-[0.005em] font-expandida"
+              className={cn(
+                "leading-[0.96] font-extrabold tracking-[0.005em] font-expandida",
+                // «ENVIRONMENTAL» es más largo que «AMBIENTAL»: en inglés el título va más chico.
+                lang === "en" ? "text-[clamp(28px,2.6cqi,40px)]" : "text-[clamp(40px,5cqi,70px)]",
+              )}
             >
-              <span className="block">ATLAS</span>
-              <span className="block">AMBIENTAL</span>
-              <span className="block">DE MÉXICO</span>
+              {t.welcome.titleLines.map((line) => (
+                <span key={line} className="block">
+                  {line}
+                </span>
+              ))}
             </h1>
-            <p className="font-display text-2xl font-medium text-bosque">Explora, comprende y analiza nuestro entorno</p>
+            <p className="font-display text-2xl font-medium text-bosque">{t.welcome.subtitle}</p>
             <p className="max-w-[34em] text-lg leading-relaxed text-tinta-suave">
-              Mapas de México construidos con observaciones satelitales de la NASA: precipitación, dióxido de nitrógeno,
-              evapotranspiración y temperatura de la superficie, entre 2000 y 2025.
+              {t.welcome.intro}
             </p>
           </div>
 
@@ -79,13 +82,12 @@ export function WelcomePage({ onEnter }: { onEnter: (mode: Mode) => void }) {
               <span className="grid size-12 place-items-center rounded-[14px] bg-bosque-claro text-bosque">
                 <Compass aria-hidden="true" className="size-6.5" />
               </span>
-              <span className="font-display text-[22px] leading-tight font-bold">Explorar el medio ambiente</span>
+              <span className="font-display text-[22px] leading-tight font-bold">{t.welcome.explorerTitle}</span>
               <span className="text-[16px] leading-normal text-tinta-suave">
-                Para estudiantes, docentes y público general. Mapas explicados paso a paso, preguntas para aprender y un
-                glosario ambiental.
+                {t.welcome.explorerText}
               </span>
               <span className="mt-auto inline-flex min-h-11 items-center self-start rounded-full bg-bosque px-5 font-display text-[15px] font-semibold text-white">
-                Comenzar a explorar
+                {t.welcome.explorerButton}
               </span>
             </button>
             <button
@@ -96,28 +98,27 @@ export function WelcomePage({ onEnter }: { onEnter: (mode: Mode) => void }) {
               <span className="grid size-12 place-items-center rounded-[14px] bg-[#24343B] text-hielo">
                 <ChartLine aria-hidden="true" className="size-6.5" />
               </span>
-              <span className="font-display text-[22px] leading-tight font-bold">Análisis científico</span>
+              <span className="font-display text-[22px] leading-tight font-bold">{t.welcome.scientificTitle}</span>
               <span className="text-[16px] leading-normal text-niebla-suave">
-                Para universidades e investigación. Series de tiempo, estadísticas, metadatos de cada producto satelital y
-                exportación de datos.
+                {t.welcome.scientificText}
               </span>
               <span className="mt-auto inline-flex min-h-11 items-center self-start rounded-full bg-hielo px-5 font-display text-[15px] font-semibold text-hielo-tinta">
-                Abrir herramientas de análisis
+                {t.welcome.scientificButton}
               </span>
             </button>
           </div>
 
           <p className="flex items-start gap-2.5 text-[15px] leading-normal text-tinta-suave">
             <ArrowLeftRight aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-bosque" />
-            Puedes cambiar de modo cuando quieras. El mapa conserva la variable, la fecha y la región que elegiste.
+            {t.welcome.switchHint}
           </p>
         </section>
 
-        <section aria-label="Vista previa del mapa" className="flex min-w-0 flex-[1.25_1_520px] flex-col gap-4">
-          <div role="group" aria-label="Variable que se muestra en el mapa" className="flex flex-wrap gap-2">
+        <section aria-label={t.welcome.previewLabel} className="flex min-w-0 flex-[1.25_1_520px] flex-col gap-4">
+          <div role="group" aria-label={t.variables.groupLabel} className="flex flex-wrap gap-2">
             {VARIABLE_IDS.map((id) => {
               const selected = id === variable;
-              const color = VARIABLES[id].display.identityColor;
+              const color = variables[id].display.identityColor;
               return (
                 <button
                   key={id}
@@ -134,7 +135,7 @@ export function WelcomePage({ onEnter }: { onEnter: (mode: Mode) => void }) {
                   )}
                 >
                   <VariableIcon variable={id} />
-                  {VARIABLES[id].shortLabel}
+                  {variables[id].shortLabel}
                 </button>
               );
             })}
@@ -143,7 +144,7 @@ export function WelcomePage({ onEnter }: { onEnter: (mode: Mode) => void }) {
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
             <div className="min-w-0 flex-[1_1_240px]">
               <p className="font-display text-[19px] font-bold">{v.name}</p>
-              <p className="mt-1 text-[16px] leading-normal text-tinta-suave">{DESCRIPTIONS[variable]}</p>
+              <p className="mt-1 text-[16px] leading-normal text-tinta-suave">{t.welcome.descriptions[variable]}</p>
             </div>
             <div className="min-w-[220px] flex-[0_1_300px]">
               <div className="flex gap-0.5 rounded-md border border-linea bg-superficie p-0.5">
@@ -156,17 +157,17 @@ export function WelcomePage({ onEnter }: { onEnter: (mode: Mode) => void }) {
                 <span>{v.display.words.high}</span>
               </div>
               <p className="mt-0.5 font-display text-[13px] font-medium text-tinta-suave font-semicondensada">
-                Unidad: {v.unitLong}. Fuente: {v.product.shortName}.
+                {t.welcome.unitSource(v.unitLong, v.product.shortName)}
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-linea pt-3">
             <p className="flex-[1_1_280px] text-sm leading-snug text-tinta-suave">
-              Ilustración con valores simulados. No son mediciones de la NASA.
+              {t.welcome.simulatedNote}
             </p>
             <Button variant="secondary" size="sm" onClick={() => setAuto((a) => !a)}>
               {auto ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
-              {auto ? "Pausar recorrido" : "Reanudar recorrido"}
+              {auto ? t.welcome.pauseTour : t.welcome.resumeTour}
             </Button>
           </div>
         </section>
@@ -176,16 +177,15 @@ export function WelcomePage({ onEnter }: { onEnter: (mode: Mode) => void }) {
         <div className="flex flex-wrap gap-x-16 gap-y-6 border-t border-linea pt-8">
           <div className="max-w-[400px] flex-[1_1_300px]">
             <h2 id="titulo-cobertura" className="text-[26px] leading-tight font-bold">
-              Qué periodo cubre cada variable
+              {t.welcome.coverageTitle}
             </h2>
             <p className="mt-2.5 text-[16px] leading-relaxed text-tinta-suave">
-              El periodo de estudio va de 2000 a 2025. Cada variable empieza cuando su instrumento comenzó a medir, y las
-              fechas sin datos válidos no se pueden consultar.
+              {t.welcome.coverageText}
             </p>
           </div>
           <div className="flex min-w-0 flex-[2_1_520px] flex-col gap-3.5">
             {VARIABLE_IDS.map((id) => {
-              const item = VARIABLES[id];
+              const item = variables[id];
               const left = position(item.availability.start, "start");
               const right = 100 - position(item.availability.end, "end");
               return (
@@ -200,13 +200,21 @@ export function WelcomePage({ onEnter }: { onEnter: (mode: Mode) => void }) {
                     <div>
                       <p className="font-display text-[15px] font-semibold">{item.shortLabel}</p>
                       <p className="text-[13px] text-tinta-suave">
-                        {item.product.shortName}, {humanYm(item.availability.start)} a {humanYm(item.availability.end)}
+                        {t.welcome.coverageRange(
+                          item.product.shortName,
+                          humanYm(item.availability.start, lang),
+                          humanYm(item.availability.end, lang),
+                        )}
                       </p>
                     </div>
                   </div>
                   <div
                     role="img"
-                    aria-label={`${item.name}: datos de ${humanYm(item.availability.start)} a ${humanYm(item.availability.end)}`}
+                    aria-label={t.welcome.coverageAria(
+                      item.name,
+                      humanYm(item.availability.start, lang),
+                      humanYm(item.availability.end, lang),
+                    )}
                     className="relative h-3 min-w-0 flex-[1_1_240px] rounded-md bg-[#DCE5E1]"
                   >
                     <div
@@ -233,8 +241,8 @@ export function WelcomePage({ onEnter }: { onEnter: (mode: Mode) => void }) {
       </section>
 
       <footer className="mx-auto flex max-w-[1320px] flex-wrap justify-between gap-x-8 gap-y-2 px-5 pt-5 pb-10 text-sm text-tinta-suave sm:px-10">
-        <p>Fuentes de datos: NASA GES DISC (GPM IMERG, Aura OMI) y NASA LP DAAC (Terra MODIS).</p>
-        <p>Los mapas de esta pantalla son ilustrativos.</p>
+        <p>{t.welcome.footerSources}</p>
+        <p>{t.welcome.footerIllustrative}</p>
       </footer>
     </div>
   );

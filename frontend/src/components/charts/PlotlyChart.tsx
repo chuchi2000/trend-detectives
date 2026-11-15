@@ -2,6 +2,7 @@ import type { Layout, PlotData } from "plotly.js-dist-min";
 import { useEffect, useRef, useState } from "react";
 
 import { StatusMessage } from "@/components/ui/status";
+import { useLanguage } from "@/i18n/language";
 
 /**
  * Envoltura de Plotly.js. La librería pesa varios MB, así que se carga solo
@@ -22,6 +23,7 @@ export function PlotlyChart({
   height?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -70,6 +72,6 @@ export function PlotlyChart({
     };
   }, []);
 
-  if (failed) return <StatusMessage kind="error">No se pudo cargar la librería de gráficas.</StatusMessage>;
+  if (failed) return <StatusMessage kind="error">{t.charts.loadError}</StatusMessage>;
   return <div ref={ref} role="img" aria-label={title} style={{ minHeight: height }} className="w-full" />;
 }

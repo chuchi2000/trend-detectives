@@ -1,6 +1,7 @@
 import { ChartLine, Compass } from "lucide-react";
 
 import type { Mode } from "@/config/variables";
+import { useLanguage } from "@/i18n/language";
 import { cn } from "@/lib/utils";
 
 /**
@@ -8,12 +9,13 @@ import { cn } from "@/lib/utils";
  * Cambiar de modo NO reinicia la consulta: solo cambia la presentación.
  */
 export function ModeSwitch({ mode, onChange, compact = false }: { mode: Mode; onChange: (mode: Mode) => void; compact?: boolean }) {
+  const { t } = useLanguage();
   const options: Array<{ id: Mode; label: string; Icon: typeof Compass }> = [
-    { id: "explorador", label: "Explorador", Icon: Compass },
-    { id: "cientifico", label: "Científico", Icon: ChartLine },
+    { id: "explorador", label: t.header.explorer, Icon: Compass },
+    { id: "cientifico", label: t.header.scientific, Icon: ChartLine },
   ];
   return (
-    <div role="group" aria-label="Modo de experiencia" className="inline-flex gap-1 rounded-full bg-panel-2 p-1">
+    <div role="group" aria-label={t.header.modeGroup} className="inline-flex gap-1 rounded-full bg-panel-2 p-1">
       {options.map(({ id, label, Icon }) => {
         const active = mode === id;
         return (

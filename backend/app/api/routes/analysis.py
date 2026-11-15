@@ -12,6 +12,7 @@ from app.schemas.models import (
     CorrelationResponse,
     StatisticsResponse,
     TimeSeriesResponse,
+    TrendMapResponse,
 )
 from app.services.atlas import AtlasService
 
@@ -52,6 +53,20 @@ def timeseries(
     trend: bool = True,
 ) -> TimeSeriesResponse:
     return service.timeseries(variable, start, end, lat, lon, region, with_trend=trend)
+
+
+@router.get(
+    "/trend-map/{variable}",
+    response_model=TrendMapResponse,
+    summary="Mapa de tendencia por década de todo México (cada píxel de 0.25°)",
+)
+def trend_map(
+    variable: VariableId, service: Service, start: YM = None, end: YM = None
+) -> TrendMapResponse:
+    """Pendiente por mínimos cuadrados de las anomalías mensuales de cada píxel, con
+    prueba t corregida por autocorrelación. Por defecto usa todo el periodo disponible
+    (temperatura: hasta 2021-12, por la deriva orbital de Terra)."""
+    return service.trend_map(variable, start, end)
 
 
 @router.get(

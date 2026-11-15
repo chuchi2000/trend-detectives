@@ -38,6 +38,8 @@ class Settings(BaseModel):
     data_dir: Path = PROJECT_ROOT / "data"
     metadata_dir: Path = PROJECT_ROOT / "metadata"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    # imagen: la API genera el PNG del mapa (no necesita Docker). titiler: teselas de TiTiler.
+    map_mode: Literal["imagen", "titiler"] = "imagen"
     titiler_url: str = "http://localhost:8001"
     # Ruta de la carpeta data/ tal como la ve el contenedor de TiTiler.
     titiler_data_dir: str = "/data"
@@ -72,7 +74,7 @@ def load_settings(env: dict[str, str] | None = None) -> Settings:
 
     kwargs: dict[str, object] = {}
     if "ATLAS_DATA_MODE" in merged:
-        kwargs["data_mode"] = merged["ATLAS_DATA_MODE"].lower()
+        kwargs["data_mode"] = merged["ATLAS_DATA_MODE"].strip().lower()
     if "ATLAS_DATA_DIR" in merged:
         kwargs["data_dir"] = Path(merged["ATLAS_DATA_DIR"]).expanduser()
     if "ATLAS_METADATA_DIR" in merged:
@@ -81,6 +83,8 @@ def load_settings(env: dict[str, str] | None = None) -> Settings:
         kwargs["cors_origins"] = [
             o.strip() for o in merged["ATLAS_CORS_ORIGINS"].split(",") if o.strip()
         ]
+    if merged.get("ATLAS_MAP_MODE"):
+        kwargs["map_mode"] = merged["ATLAS_MAP_MODE"].strip().lower()
     if "TITILER_URL" in merged:
         kwargs["titiler_url"] = merged["TITILER_URL"].rstrip("/")
     if "TITILER_DATA_DIR" in merged:

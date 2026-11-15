@@ -1,5 +1,6 @@
 import { MOSAIC_COAST, MOSAIC_LAYERS, MOSAIC_VIEWBOX } from "@/components/brand/mosaicData";
-import { VARIABLES, type VariableId } from "@/config/variables";
+import type { VariableId } from "@/config/variables";
+import { useLanguage, useVariables } from "@/i18n/language";
 
 const GRATICULE_LAT = [15, 20, 25, 30];
 const GRATICULE_LON = [-115, -110, -105, -100, -95, -90];
@@ -15,13 +16,15 @@ const S = MOSAIC_VIEWBOX.width / ((-86.2 - LON0) * KX);
  * (transición suave de opacidad).
  */
 export function MosaicMap({ variable }: { variable: VariableId }) {
+  const { lang, t } = useLanguage();
+  const name = useVariables()[variable].name;
   return (
     <div className="overflow-hidden rounded-[18px] bg-[#D9E7EA]">
       <svg
         viewBox={`0 0 ${MOSAIC_VIEWBOX.width} ${MOSAIC_VIEWBOX.height}`}
         className="block h-auto w-full"
         role="img"
-        aria-label={`Mapa ilustrativo de México: ${VARIABLES[variable].name.toLowerCase()}. Valores simulados, no son mediciones.`}
+        aria-label={t.welcome.mosaicAria(lang === "en" ? name : name.toLowerCase())}
       >
         <path d={MOSAIC_COAST} fill="#E3E9E5" />
         <g stroke="#C3D2CE" strokeWidth="1" fill="none">
@@ -48,7 +51,7 @@ export function MosaicMap({ variable }: { variable: VariableId }) {
           ))}
           {GRATICULE_LON.map((lon) => (
             <text key={lon} x={(lon - LON0) * KX * S} y="20" textAnchor="middle">
-              {Math.abs(lon)}° O
+              {Math.abs(lon)}° {t.welcome.west}
             </text>
           ))}
         </g>

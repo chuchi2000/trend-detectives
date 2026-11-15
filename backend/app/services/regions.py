@@ -21,13 +21,18 @@ from typing import Any
 import numpy as np
 
 from app.core.errors import InvalidRequest, NotFound
+from app.core.i18n import tr
 from app.services.geometry import points_in_geometry
 from app.services.grid import CommonGrid
 
-MISSING_MESSAGE = (
-    "Los límites del INEGI todavía no están cargados. En la carpeta backend ejecuta "
-    "`python -m processing.cli limites` (los descarga del INEGI) y reinicia la API."
-)
+
+def missing_message() -> str:
+    return tr(
+        "Los límites del INEGI todavía no están cargados. En la carpeta backend ejecuta "
+        "`python -m processing.cli limites` (los descarga del INEGI) y reinicia la API.",
+        "The INEGI boundaries are not loaded yet. In the backend folder run "
+        "`python -m processing.cli limites` (it downloads them from INEGI) and restart the API.",
+    )
 
 
 def parse_region(text: str | None) -> tuple[str, str | None]:
@@ -37,7 +42,12 @@ def parse_region(text: str | None) -> tuple[str, str | None]:
     level, _, code = text.partition(":")
     mapping = {"estado": "state", "municipio": "municipality"}
     if level not in mapping or not code.isdigit():
-        raise InvalidRequest("Región inválida. Usa 'nacional', 'estado:CLAVE' o 'municipio:CLAVE'.")
+        raise InvalidRequest(
+            tr(
+                "Región inválida. Usa 'nacional', 'estado:CLAVE' o 'municipio:CLAVE'.",
+                "Invalid region. Use 'nacional', 'estado:CODE' or 'municipio:CODE'.",
+            )
+        )
     return mapping[level], code
 
 
@@ -85,27 +95,37 @@ class RegionService:
     def geojson(self, level: str, state_code: str | None = None) -> dict[str, Any]:
         if level == "state":
             if not self.available:
-                raise NotFound(MISSING_MESSAGE, code="limites_no_cargados")
+                raise NotFound(missing_message(), code="limites_no_cargados")
             return self._load("states.geojson")
         if level == "municipality":
             if not state_code:
-                raise InvalidRequest("Para municipios indica la entidad con el parámetro 'estado'.")
+                raise InvalidRequest(
+                    tr(
+                        "Para municipios indica la entidad con el parámetro 'estado'.",
+                        "For municipalities, give the state with the 'estado' parameter.",
+                    )
+                )
             path = self.dir / "municipalities" / f"{state_code}.geojson"
             if not path.is_file():
-                raise NotFound(MISSING_MESSAGE, code="limites_no_cargados")
+                raise NotFound(missing_message(), code="limites_no_cargados")
             return self._load(f"municipalities/{state_code}.geojson")
-        raise InvalidRequest("Nivel inválido: usa 'state' o 'municipality'.")
+        raise InvalidRequest(
+            tr(
+                "Nivel inválido: usa 'state' o 'municipality'.",
+                "Invalid level: use 'state' or 'municipality'.",
+            )
+        )
 
     def feature(self, level: str, code: str) -> dict[str, Any]:
         collection = self.geojson(level, code[:2] if level == "municipality" else None)
         for feature in collection["features"]:
             if feature["properties"]["code"] == code:
                 return feature
-        raise NotFound(f"No se encontró la región {code}.")
+        raise NotFound(tr(f"No se encontró la región {code}.", f"Region {code} was not found."))
 
     def name_of(self, level: str, code: str | None) -> str:
         if level == "national":
-            return "México (todo el país)"
+            return tr("México (todo el país)", "Mexico (whole country)")
         assert code is not None
         return str(self.feature(level, code)["properties"]["name"])
 
@@ -128,15 +148,19 @@ class RegionService:
             self._mask_cache[key] = mask
         return self._mask_cache[key]
 
-    def national_mask(self) -> np.ndarray | None:
+    def national_geometry(self) -> dict[str, Any] | None:
+        """Contorno de México (GeoJSON, lon/lat) o None si los límites no están cargados."""
         path = self.dir / "mexico.geojson"
         if not path.is_file():
             return None
+        data = _read_geojson(str(path))
+        return data["features"][0]["geometry"] if data.get("type") == "FeatureCollection" else data
+
+    def national_mask(self) -> np.ndarray | None:
         if ("national", None) not in self._mask_cache:
-            data = _read_geojson(str(path))
-            geometry = (
-                data["features"][0]["geometry"] if data.get("type") == "FeatureCollection" else data
-            )
+            geometry = self.national_geometry()
+            if geometry is None:
+                return None
             inside = points_in_geometry(geometry, self.grid.lon2d.ravel(), self.grid.lat2d.ravel())
             self._mask_cache[("national", None)] = inside.reshape(self.grid.shape)
         return self._mask_cache[("national", None)]

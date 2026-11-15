@@ -1,5 +1,6 @@
 import { useAtlas } from "@/context/AtlasStateContext";
-import { STUDY_PERIOD, VARIABLES } from "@/config/variables";
+import { STUDY_PERIOD } from "@/config/variables";
+import { useLanguage, useVariables } from "@/i18n/language";
 import { inRange, yearsOf } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -9,11 +10,12 @@ import { cn } from "@/lib/utils";
  */
 export function Timeline() {
   const { state, dispatch } = useAtlas();
-  const variable = VARIABLES[state.variable];
+  const { t } = useLanguage();
+  const variable = useVariables()[state.variable];
   const years = yearsOf(STUDY_PERIOD);
 
   return (
-    <nav aria-label="Barra cronológica" className="flex flex-col gap-1">
+    <nav aria-label={t.time.timelineLabel} className="flex flex-col gap-1">
       <div className="flex gap-[3px]">
         {years.map((year) => {
           const any = Array.from({ length: 12 }, (_, i) => inRange({ year, month: i + 1 }, variable.availability)).some(Boolean);
@@ -25,8 +27,8 @@ export function Timeline() {
               type="button"
               disabled={!any}
               aria-current={current ? "date" : undefined}
-              aria-label={any ? `Ir a ${year}` : `${year}: sin datos de ${variable.shortLabel}`}
-              title={any ? String(year) : `${year}: sin datos`}
+              aria-label={any ? t.time.goTo(year) : t.time.noDataFor(year, variable.shortLabel)}
+              title={any ? String(year) : t.time.noDataShort(year)}
               onClick={() => dispatch({ type: "setDate", date: { year, month: state.date.month } })}
               className={cn(
                 "h-7 min-w-0 flex-1 rounded-[4px] transition-colors",

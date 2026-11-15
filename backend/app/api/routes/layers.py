@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.deps import VariableId, get_service
 from app.schemas.models import LayerResponse, PointResponse
@@ -19,6 +19,19 @@ router = APIRouter(tags=["Capas"])
 Service = Annotated[AtlasService, Depends(get_service)]
 Year = Annotated[int, Query(ge=2000, le=2025, description="Año (2000–2025)")]
 Month = Annotated[int, Query(ge=1, le=12, description="Mes (1–12)")]
+
+
+@router.get(
+    "/layers/{variable}/image.png",
+    response_class=Response,
+    responses={200: {"content": {"image/png": {}}}},
+    summary="Imagen PNG del mapa mensual (modo real)",
+)
+def layer_image(variable: VariableId, year: Year, month: Month, service: Service) -> Response:
+    png = service.layer_image(variable, year, month)
+    return Response(
+        content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=3600"}
+    )
 
 
 @router.get(

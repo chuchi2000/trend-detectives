@@ -18,6 +18,27 @@ export const MONTHS_ES = [
   "diciembre",
 ] as const;
 
+export const MONTHS_EN = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+export type Lang = "es" | "en";
+
+export function monthNames(lang: Lang = "es"): readonly string[] {
+  return lang === "en" ? MONTHS_EN : MONTHS_ES;
+}
+
 export interface YearMonth {
   year: number;
   month: number;
@@ -41,8 +62,10 @@ export function formatYm({ year, month }: YearMonth): string {
   return `${year}-${String(month).padStart(2, "0")}`;
 }
 
-export function humanYm(value: YearMonth | string): string {
+/** "julio de 2015" en español, "July 2015" en inglés. */
+export function humanYm(value: YearMonth | string, lang: Lang = "es"): string {
   const ym = typeof value === "string" ? parseYm(value) : value;
+  if (lang === "en") return `${MONTHS_EN[ym.month - 1]} ${ym.year}`;
   return `${MONTHS_ES[ym.month - 1]} de ${ym.year}`;
 }
 

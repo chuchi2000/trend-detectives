@@ -1,14 +1,17 @@
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap, type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import type { FeatureCollection } from "geojson";
 import { Crosshair, ImageDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useAtlas } from "@/context/AtlasStateContext";
 import { MEXICO_VIEW, VARIABLES } from "@/config/variables";
-import { gridCorners, gridToImage } from "@/components/maps/gridImage";
-import { api } from "@/services/api";
-import type { LayerResponse } from "@/services/types";
+import { useLanguage, useVariables } from "@/i18n/language";
+import { gridCorners, gridToImage, trendToImage } from "@/components/maps/gridImage";
+import { TREND_LIMITS } from "@/config/trend";
+import { api, apiAssetUrl } from "@/services/api";
+import type { LayerResponse, TrendMapResponse } from "@/services/types";
 
 const BASEMAP = import.meta.env.VITE_BASEMAP_STYLE || "https://tiles.openfreemap.org/styles/positron";
 
@@ -31,12 +34,24 @@ function firstLabelLayer(map: MapLibreMap): string | undefined {
  *
  * - Muestra todo México al inicio; se puede acercar, alejar y desplazar
  *   (también con el teclado: flechas y +/−).
- * - La capa de datos es una imagen de malla (DEMO) o teselas de TiTiler (REALES).
+ * - La capa de datos es una imagen de malla (DEMO), la imagen PNG que genera la API
+ *   (REALES, por defecto) o teselas de TiTiler (REALES con ATLAS_MAP_MODE=titiler).
  * - Límites estatales y municipales del INEGI cuando el backend los tiene.
+ * - Vista «Tendencia»: rejilla de 0.25° con la pendiente por década (escala divergente).
  * - Un clic consulta el valor en ese lugar.
  */
-export function AtlasMap({ layer, theme }: { layer: LayerResponse | null; theme: "claro" | "oscuro" }) {
+export function AtlasMap({
+  layer,
+  trend = null,
+  theme,
+}: {
+  layer: LayerResponse | null;
+  trend?: TrendMapResponse | null;
+  theme: "claro" | "oscuro";
+}) {
   const { state, dispatch } = useAtlas();
+  const { lang, t } = useLanguage();
+  const variables = useVariables();
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
@@ -44,6 +59,7 @@ export function AtlasMap({ layer, theme }: { layer: LayerResponse | null; theme:
   const [styleVersion, setStyleVersion] = useState(0);
   const ready = styleVersion > 0;
   const [boundaryMessage, setBoundaryMessage] = useState<string | null>(null);
+  const [dataMessage, setDataMessage] = useState<string | null>(null);
 
   // Crear el mapa una sola vez.
   useEffect(() => {
@@ -59,14 +75,28 @@ export function AtlasMap({ layer, theme }: { layer: LayerResponse | null; theme:
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
     let usedFallback = false;
+    let basemapReady = false;
     map.on("error", (event) => {
-      if (!map.isStyleLoaded() && !usedFallback) {
+      const sourceId = (event as unknown as { sourceId?: string }).sourceId;
+      // Un error de la capa de datos o de los límites NO es un error del mapa base:
+      // antes, una tesela de datos fallida reemplazaba el mapa base por el fondo liso.
+      if (sourceId === DATA_SOURCE) {
+        console.warn("No se pudo cargar la capa de datos del mapa.", event.error);
+        // Se guarda solo la marca; el texto se escribe al mostrarlo, en el idioma activo.
+        setDataMessage("error");
+        return;
+      }
+      if (sourceId?.startsWith("limites")) return;
+      if (!basemapReady && !usedFallback) {
         usedFallback = true;
         console.warn("No se pudo cargar el mapa base; se usa un fondo simple.", event.error);
         map.setStyle(FALLBACK_STYLE);
       }
     });
-    map.on("style.load", () => setStyleVersion((v) => v + 1));
+    map.on("style.load", () => {
+      basemapReady = true;
+      setStyleVersion((v) => v + 1);
+    });
     map.on("click", (event) => {
       dispatch({ type: "setPoint", point: { lat: event.lngLat.lat, lon: event.lngLat.lng } });
     });
@@ -80,16 +110,38 @@ export function AtlasMap({ layer, theme }: { layer: LayerResponse | null; theme:
   // Capa de datos.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready || !layer) return;
-    const display = VARIABLES[layer.variable].display;
+    if (!map || !ready) return;
+    const showTrend = state.mapView === "tendencia";
     if (map.getLayer(DATA_LAYER)) map.removeLayer(DATA_LAYER);
     if (map.getSource(DATA_SOURCE)) map.removeSource(DATA_SOURCE);
+    setDataMessage(null);
+    if (showTrend ? !trend : !layer) return;
 
-    if (layer.layer.kind === "grid" && layer.layer.grid) {
+    if (showTrend && trend) {
       map.addSource(DATA_SOURCE, {
         type: "image",
-        url: gridToImage(layer.layer.grid, display),
+        url: trendToImage(trend, TREND_LIMITS[trend.variable]),
+        coordinates: gridCorners(trend.grid),
+      });
+    } else if (!layer) {
+      return;
+    } else if (layer.layer.kind === "grid" && layer.layer.grid) {
+      map.addSource(DATA_SOURCE, {
+        type: "image",
+        url: gridToImage(layer.layer.grid, VARIABLES[layer.variable].display),
         coordinates: gridCorners(layer.layer.grid),
+      });
+    } else if (layer.layer.kind === "image" && layer.layer.image) {
+      const [nw, ne, se, sw] = layer.layer.image.coordinates as [number, number][];
+      map.addSource(DATA_SOURCE, {
+        type: "image",
+        url: apiAssetUrl(layer.layer.image.url),
+        coordinates: [nw, ne, se, sw] as [
+          [number, number],
+          [number, number],
+          [number, number],
+          [number, number],
+        ],
       });
     } else if (layer.layer.kind === "tiles" && layer.layer.tiles) {
       map.addSource(DATA_SOURCE, {
@@ -113,7 +165,7 @@ export function AtlasMap({ layer, theme }: { layer: LayerResponse | null; theme:
       firstLabelLayer(map),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layer, styleVersion]);
+  }, [layer, trend, state.mapView, styleVersion]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -186,7 +238,7 @@ export function AtlasMap({ layer, theme }: { layer: LayerResponse | null; theme:
     const map = mapRef.current;
     if (!map || !ready) return;
     const id = "region-seleccionada";
-    const empty: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
+    const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
     if (!map.getSource(id)) {
       map.addSource(id, { type: "geojson", data: empty });
       map.addLayer({ id, type: "line", source: id, paint: { "line-color": "#1E9C96", "line-width": 2.5 } });
@@ -249,31 +301,40 @@ export function AtlasMap({ layer, theme }: { layer: LayerResponse | null; theme:
     return () => observer.disconnect();
   }, []);
 
-  const variable = VARIABLES[state.variable];
+  const variable = variables[state.variable];
   return (
     <div className="relative min-h-[320px] w-full flex-1 overflow-hidden rounded-[20px] border border-borde bg-[#D9E7EA]">
-      {/* Posición en línea (no con clases de Tailwind): maplibre-gl.css pone
-          `.maplibregl-map { position: relative }` fuera de @layer y le gana a
-          `absolute`, lo que deja el contenedor con 0 px de alto. */}
       <div
         ref={container}
+        // Posición en línea, no con clases de Tailwind: maplibre-gl.css pone
+        // `.maplibregl-map { position: relative }` fuera de @layer y le gana a
+        // `absolute`, lo que deja el contenedor del mapa con 0 px de alto.
         style={{ position: "absolute", inset: 0 }}
         role="region"
-        aria-label={`Mapa de ${variable.name.toLowerCase()} en México. Haz clic en un lugar para consultar su valor.`}
+        aria-label={t.map.aria(lang === "en" ? variable.name : variable.name.toLowerCase())}
       />
       <div className="absolute bottom-3 right-3 flex gap-2">
         <Button size="sm" variant="secondary" className="bg-panel/95" onClick={queryCenter}>
           <Crosshair aria-hidden="true" />
-          Consultar el centro
+          {t.map.queryCenter}
         </Button>
-        <Button size="sm" variant="secondary" className="bg-panel/95" onClick={downloadImage} aria-label="Descargar imagen del mapa">
+        <Button size="sm" variant="secondary" className="bg-panel/95" onClick={downloadImage} aria-label={t.map.downloadImage}>
           <ImageDown aria-hidden="true" />
         </Button>
       </div>
-      {boundaryMessage && state.layers.states && (
-        <p className="absolute top-3 left-3 max-w-xs rounded-xl bg-panel/95 px-3 py-2 text-xs text-texto-suave">
-          Límites estatales no disponibles: {boundaryMessage}
-        </p>
+      {(dataMessage || (boundaryMessage && state.layers.states)) && (
+        <div className="absolute top-3 left-3 flex max-w-xs flex-col gap-2">
+          {dataMessage && (
+            <p role="alert" className="rounded-xl bg-panel/95 px-3 py-2 text-xs text-texto">
+              {t.map.dataError}
+            </p>
+          )}
+          {boundaryMessage && state.layers.states && (
+            <p className="rounded-xl bg-panel/95 px-3 py-2 text-xs text-texto-suave">
+              {t.map.boundariesUnavailable(boundaryMessage)}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

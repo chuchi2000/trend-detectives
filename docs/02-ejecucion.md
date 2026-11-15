@@ -39,8 +39,16 @@ Al terminar, reinicia la API. Detalle en [05-procesamiento-nasa.md](05-procesami
 Requiere haber procesado al menos un mes (ver [05-procesamiento-nasa.md](05-procesamiento-nasa.md)).
 
 1. En `.env`: `ATLAS_DATA_MODE=real`.
-2. `docker compose up -d titiler` (sirve las teselas de los COG).
-3. Reinicia `uvicorn`.
+2. Reinicia `uvicorn`.
+
+El mapa lo genera la propia API (`ATLAS_MAP_MODE=imagen`, valor por defecto): **no hace
+falta Docker ni TiTiler**. La imagen de cada mes se colorea con las mismas 9 clases de la
+leyenda y sus filas se ajustan a la proyección del mapa web (Mercator) para que quede
+alineada con las fronteras. Si prefieres teselas de TiTiler (útil para acercamientos
+muy grandes con ráster de 500 m), usa `ATLAS_MAP_MODE=titiler` y
+`docker compose up -d titiler`.
+
+3. Revisa que `http://localhost:8000/api/health` diga `"mode": "real"`.
 4. `http://localhost:8000/api/health` debe decir `"mode": "real"`, y
    `http://localhost:8000/api/variables` muestra en `availability.processed` los meses
    procesados de cada variable.
@@ -49,7 +57,7 @@ Qué funciona con qué archivos:
 
 | Función | Necesita |
 |---|---|
-| Mapa de una variable y fecha | COG nativo de ese mes + TiTiler |
+| Mapa de una variable y fecha | COG de ese mes (la API genera la imagen) |
 | Valor en un punto | COG nativo |
 | Estadísticas, series, tendencia, correlación, comparación | Cubo comparativo 0.25° (`python -m processing.cli comparativo`) |
 | Estadísticas por estado/municipio | Además, límites del INEGI (`python -m processing.cli limites`) |

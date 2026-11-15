@@ -18,13 +18,20 @@ from typing import Any, Literal
 
 import numpy as np
 
+from app.core.i18n import tr
 from app.services.dates import format_ym, from_index, iter_months, parse_ym, ym_index
 from app.services.demo_geometry import MEXICO_APPROX_GEOMETRY
 from app.services.geometry import points_in_geometry
 from app.services.grid import CommonGrid
 from app.services.products import ProductCatalog
 
-DEMO_NOTE = "Valores SIMULADOS para desarrollo de la interfaz. No son mediciones de NASA."
+
+def demo_note() -> str:
+    return tr(
+        "Valores SIMULADOS para desarrollo de la interfaz. No son mediciones de NASA.",
+        "SIMULATED values for interface development. They are not NASA measurements.",
+    )
+
 
 # Ciudades usadas para simular focos de NO₂ (lon, lat, intensidad, radio en grados).
 _NO2_SOURCES = [
@@ -185,14 +192,17 @@ class DemoStore:
                     "ny": self.grid.shape[0],
                     "values": flat,
                 },
-                "attribution": "Datos simulados (DEMO)",
+                "attribution": tr("Datos simulados (DEMO)", "Simulated data (DEMO)"),
             },
-            "resolution": f"{self.grid.res}° (malla común de demostración)",
+            "resolution": tr(
+                f"{self.grid.res}° (malla común de demostración)",
+                f"{self.grid.res}° (common demo grid)",
+            ),
             "quality": {
                 "coverage": n_valid / n_mask if n_mask else 0.0,
                 "n_valid": n_valid,
                 "flags": ["demo"],
-                "notes": [DEMO_NOTE],
+                "notes": [demo_note()],
             },
         }
 

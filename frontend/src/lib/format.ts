@@ -12,8 +12,9 @@ export function formatPercent(value: number | null | undefined, digits = 0): str
   return `${(value * 100).toFixed(digits)} %`;
 }
 
-export function formatCoord(lat: number, lon: number): string {
+/** "19.43° N, 99.13° O" en español; "19.43° N, 99.13° W" en inglés. */
+export function formatCoord(lat: number, lon: number, lang: "es" | "en" = "es"): string {
   const ns = lat >= 0 ? "N" : "S";
-  const eo = lon >= 0 ? "E" : "O";
+  const eo = lon >= 0 ? "E" : lang === "en" ? "W" : "O";
   return `${Math.abs(lat).toFixed(2)}° ${ns}, ${Math.abs(lon).toFixed(2)}° ${eo}`;
 }

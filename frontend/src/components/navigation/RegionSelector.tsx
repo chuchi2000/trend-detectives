@@ -1,6 +1,7 @@
 import { Select } from "@/components/ui/select";
 import { useAtlas } from "@/context/AtlasStateContext";
 import { useApi } from "@/hooks/useApi";
+import { useLanguage } from "@/i18n/language";
 import { api } from "@/services/api";
 
 /**
@@ -9,6 +10,7 @@ import { api } from "@/services/api";
  */
 export function RegionSelector() {
   const { state, dispatch } = useAtlas();
+  const { t } = useLanguage();
   const states = useApi((signal) => api.regions("state", undefined, signal), []);
   const stateCode = state.region?.code.slice(0, 2) ?? "";
   const municipalities = useApi(
@@ -19,8 +21,7 @@ export function RegionSelector() {
   if (states.status === "success" && !states.data.available) {
     return (
       <p className="rounded-xl bg-panel-2 p-3 text-sm text-texto-suave">
-        Por ahora solo hay estadísticas de todo el país: los límites estatales y municipales del INEGI aún no están
-        cargados en el servidor.
+        {t.region.onlyNational}
       </p>
     );
   }
@@ -30,16 +31,16 @@ export function RegionSelector() {
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       <Select
-        label="Región"
+        label={t.region.region}
         value={stateCode}
         onChange={(e) => {
           const item = stateItems.find((s) => s.code === e.target.value);
           dispatch({ type: "setRegion", region: item ? { level: "state", code: item.code, name: item.name } : null });
         }}
-        options={[{ value: "", label: "Todo México" }, ...stateItems.map((s) => ({ value: s.code, label: s.name }))]}
+        options={[{ value: "", label: t.region.allMexico }, ...stateItems.map((s) => ({ value: s.code, label: s.name }))]}
       />
       <Select
-        label="Municipio"
+        label={t.region.municipality}
         value={state.region?.level === "municipality" ? state.region.code : ""}
         disabled={!stateCode || muniItems.length === 0}
         onChange={(e) => {
@@ -55,7 +56,7 @@ export function RegionSelector() {
           });
         }}
         options={[
-          { value: "", label: stateCode ? "Todo el estado" : "Elige un estado" },
+          { value: "", label: stateCode ? t.region.wholeState : t.region.chooseState },
           ...muniItems.map((m) => ({ value: m.code, label: m.name })),
         ]}
       />

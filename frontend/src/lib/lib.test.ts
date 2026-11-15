@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { VARIABLES } from "@/config/variables";
 import { classIndex, classLabels, colorFor } from "@/lib/classify";
 import { clampToRange, humanYm, inRange, stepWithin } from "@/lib/dates";
-import { formatNumber } from "@/lib/format";
+import { formatCoord, formatNumber } from "@/lib/format";
 
 describe("fechas", () => {
   const range = { start: "2004-10", end: "2025-09" };
@@ -20,6 +20,11 @@ describe("fechas", () => {
   });
   it("escribe fechas en español", () => {
     expect(humanYm("2015-07")).toBe("julio de 2015");
+  });
+  it("y en inglés", () => {
+    expect(humanYm("2015-07", "en")).toBe("July 2015");
+    expect(formatCoord(19.43, -99.13, "en")).toBe("19.43° N, 99.13° W");
+    expect(formatCoord(19.43, -99.13)).toBe("19.43° N, 99.13° O");
   });
 });
 

@@ -2,7 +2,8 @@ import type { PlotData } from "plotly.js-dist-min";
 import { useMemo } from "react";
 
 import { PlotlyChart } from "@/components/charts/PlotlyChart";
-import { VARIABLES, type VariableId } from "@/config/variables";
+import type { VariableId } from "@/config/variables";
+import { useLanguage, useVariables } from "@/i18n/language";
 import type { TimeSeriesResponse } from "@/services/types";
 
 /**
@@ -21,8 +22,10 @@ export function TimeSeriesChart({
   theme: "claro" | "oscuro";
   showTrend?: boolean;
 }) {
+  const { t } = useLanguage();
+  const variables = useVariables();
   const data = useMemo(() => {
-    const v = VARIABLES[series.variable];
+    const v = variables[series.variable];
     const scale = v.display.scale;
     const toDisplay = (value: number | null) => (value === null ? null : value / scale);
     const traces: PlotData[] = [
@@ -39,21 +42,21 @@ export function TimeSeriesChart({
       },
     ];
     if (showTrend && series.trend) {
-      const t = series.trend;
-      const slope = t.slope_per_decade / 10;
-      const first = t.years[0] ?? 0;
-      const last = t.years[t.years.length - 1] ?? 0;
+      const annual = series.trend;
+      const slope = annual.slope_per_decade / 10;
+      const first = annual.years[0] ?? 0;
+      const last = annual.years[annual.years.length - 1] ?? 0;
       traces.push({
         type: "scatter",
         mode: "lines",
-        name: "Tendencia (promedios anuales)",
+        name: t.charts.annualTrend,
         x: [`${first}-07-01`, `${last}-07-01`],
-        y: [toDisplay(t.intercept + slope * first), toDisplay(t.intercept + slope * last)],
+        y: [toDisplay(annual.intercept + slope * first), toDisplay(annual.intercept + slope * last)],
         line: { color: theme === "oscuro" ? "#E6EEF0" : "#10302A", width: 2, dash: "dash" },
       });
     }
     if (second) {
-      const w = VARIABLES[second.variable as VariableId];
+      const w = variables[second.variable as VariableId];
       traces.push({
         type: "scatter",
         mode: "lines",
@@ -66,26 +69,26 @@ export function TimeSeriesChart({
       });
     }
     return traces;
-  }, [series, second, showTrend, theme]);
+  }, [series, second, showTrend, theme, variables, t]);
 
   const layout = useMemo(() => {
-    const v = VARIABLES[series.variable];
+    const v = variables[series.variable];
     const base: Record<string, unknown> = {
       yaxis: { title: { text: v.display.displayUnit } },
     };
     if (second) {
-      const w = VARIABLES[second.variable as VariableId];
+      const w = variables[second.variable as VariableId];
       base.yaxis2 = { title: { text: w.display.displayUnit }, overlaying: "y", side: "right", showgrid: false };
     }
     return base;
-  }, [series.variable, second]);
+  }, [series.variable, second, variables]);
 
   return (
     <PlotlyChart
       data={data}
       layout={layout}
       theme={theme}
-      title={`Serie de tiempo mensual de ${VARIABLES[series.variable].name}`}
+      title={t.charts.seriesTitle(variables[series.variable].name)}
     />
   );
 }

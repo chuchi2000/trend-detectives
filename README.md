@@ -90,6 +90,7 @@ Abre <http://localhost:5173>. La documentación interactiva de la API está en
 6. [Agregar una variable nueva](docs/06-agregar-variables.md)
 7. [Cuenta Earthdata y credenciales](docs/07-earthdata.md)
 8. [VS Code: extensiones y configuración](docs/08-vscode.md)
+9. [Descarga rápida con Earth Engine y Harmony](docs/09-descarga-rapida.md)
 9. [Auditoría de productos](metadata/documentation/auditoria-productos.md)
 
 ## Seguridad

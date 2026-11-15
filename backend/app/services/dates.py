@@ -9,6 +9,8 @@ from __future__ import annotations
 import calendar
 from collections.abc import Iterator
 
+from app.core.i18n import get_lang, tr
+
 MONTH_NAMES_ES = [
     "enero",
     "febrero",
@@ -22,6 +24,20 @@ MONTH_NAMES_ES = [
     "octubre",
     "noviembre",
     "diciembre",
+]
+MONTH_NAMES_EN = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 ]
 
 
@@ -38,9 +54,16 @@ def parse_ym(text: str) -> tuple[int, int]:
         year_s, month_s = text.split("-")
         year, month = int(year_s), int(month_s)
     except ValueError as exc:  # formato incorrecto
-        raise ValueError(f"Fecha '{text}' inválida; usa el formato AAAA-MM.") from exc
+        raise ValueError(
+            tr(
+                f"Fecha '{text}' inválida; usa el formato AAAA-MM.",
+                f"Invalid date '{text}'; use the YYYY-MM format.",
+            )
+        ) from exc
     if not 1 <= month <= 12:
-        raise ValueError(f"Mes {month} fuera de rango (1–12).")
+        raise ValueError(
+            tr(f"Mes {month} fuera de rango (1–12).", f"Month {month} out of range (1–12).")
+        )
     return year, month
 
 
@@ -50,6 +73,8 @@ def format_ym(year: int, month: int) -> str:
 
 def human_ym(text: str) -> str:
     year, month = parse_ym(text)
+    if get_lang() == "en":
+        return f"{MONTH_NAMES_EN[month - 1]} {year}"
     return f"{MONTH_NAMES_ES[month - 1]} de {year}"
 
 

@@ -25,6 +25,8 @@ from typing import Any
 
 import numpy as np
 
+from app.core.i18n import tr
+
 
 def normal_cdf(z: float) -> float:
     return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
@@ -234,9 +236,12 @@ def sen_confidence_interval(
 
 
 VERDICTS = {
-    "solida": "Tendencia sólida",
-    "indicio": "Indicio de tendencia, no concluyente",
-    "variabilidad": "No se distingue de la variabilidad natural",
+    "solida": ("Tendencia sólida", "Solid trend"),
+    "indicio": ("Indicio de tendencia, no concluyente", "Hint of a trend, not conclusive"),
+    "variabilidad": (
+        "No se distingue de la variabilidad natural",
+        "Cannot be told apart from natural variability",
+    ),
 }
 
 
@@ -268,40 +273,55 @@ def trend(
     change = slope * (years[-1] - years[0])
     signal_to_noise = abs(change) / noise if noise > 0 else None
 
-    direction = "al alza" if slope > 0 else "a la baja"
+    up = slope > 0
     pct = int(round(confidence * 100))
+    p = f"{mk['p_value']:.3f}"
     if verdict == "solida":
-        reading = (
-            f"Tendencia {direction} sólida: la prueba de Mann–Kendall la detecta (p = "
-            f"{mk['p_value']:.3f}) y el intervalo de confianza del {pct} % de la pendiente "
-            "no incluye el cero. Es poco probable que sea solo variabilidad natural."
+        reading = tr(
+            f"Tendencia {'al alza' if up else 'a la baja'} sólida: la prueba de Mann–Kendall la "
+            f"detecta (p = {p}) y el intervalo de confianza del {pct} % de la pendiente no incluye "
+            "el cero. Es poco probable que sea solo variabilidad natural.",
+            f"Solid {'upward' if up else 'downward'} trend: the Mann–Kendall test detects it "
+            f"(p = {p}) and the {pct} % confidence interval of the slope does not include zero. "
+            "It is unlikely to be just natural variability.",
         )
     elif verdict == "indicio":
-        reading = (
-            f"Hay un indicio de tendencia {direction} (p = {mk['p_value']:.3f}), pero no alcanza "
-            f"el nivel de confianza del {pct} %. Con más años de datos podría confirmarse o desaparecer."
+        reading = tr(
+            f"Hay un indicio de tendencia {'al alza' if up else 'a la baja'} (p = {p}), pero no "
+            f"alcanza el nivel de confianza del {pct} %. Con más años de datos podría confirmarse "
+            "o desaparecer.",
+            f"There is a hint of a {'upward' if up else 'downward'} trend (p = {p}), but it does "
+            f"not reach the {pct} % confidence level. With more years of data it could be "
+            "confirmed or disappear.",
         )
     else:
-        reading = (
-            f"El cambio observado (p = {mk['p_value']:.3f}) es compatible con la variabilidad "
-            f"natural de un año a otro: el intervalo del {pct} % de la pendiente incluye el cero."
+        reading = tr(
+            f"El cambio observado (p = {p}) es compatible con la variabilidad natural de un año a "
+            f"otro: el intervalo del {pct} % de la pendiente incluye el cero.",
+            f"The observed change (p = {p}) is compatible with natural year-to-year variability: "
+            f"the {pct} % interval of the slope includes zero.",
         )
     if mk["correction_factor"] > 1.0:
-        reading += (
+        reading += tr(
             " Los años consecutivos se parecen entre sí (autocorrelación), por lo que la prueba "
-            "se corrigió para ser más exigente."
+            "se corrigió para ser más exigente.",
+            " Consecutive years resemble each other (autocorrelation), so the test was corrected "
+            "to be stricter.",
         )
     return {
-        "method": (
+        "method": tr(
             "Pendiente de Theil–Sen sobre promedios anuales (años con ≥ 9 meses válidos), prueba "
             "de Mann–Kendall con corrección por autocorrelación (Hamed y Rao, 1998; Yue y Wang, "
-            f"2004) e intervalo de confianza del {pct} % de la pendiente (Sen, 1968)"
+            f"2004) e intervalo de confianza del {pct} % de la pendiente (Sen, 1968)",
+            "Theil–Sen slope on annual means (years with ≥ 9 valid months), Mann–Kendall test "
+            "with autocorrelation correction (Hamed and Rao, 1998; Yue and Wang, 2004) and "
+            f"{pct} % confidence interval of the slope (Sen, 1968)",
         ),
         "slope_per_decade": slope * 10,
         "slope_ci_low_per_decade": ci_low * 10,
         "slope_ci_high_per_decade": ci_high * 10,
         "confidence": confidence,
-        "unit": f"{unit} por década",
+        "unit": f"{unit} {tr('por década', 'per decade')}",
         "intercept": intercept,
         "p_value": mk["p_value"],
         "p_value_uncorrected": mk["p_value_uncorrected"],
@@ -315,7 +335,7 @@ def trend(
         "annual_means": means,
         "significant": verdict == "solida",
         "verdict": verdict,
-        "verdict_label": VERDICTS[verdict],
+        "verdict_label": tr(*VERDICTS[verdict]),
         "interpretation": reading,
     }
 

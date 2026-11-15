@@ -7,8 +7,10 @@
  * cortes o las fechas disponibles, edita products.json y ambos lados cambian.
  */
 import products from "@metadata/sources/products.json";
+import productsEn from "@metadata/sources/products.en.json";
 
-import type { Range } from "@/lib/dates";
+import type { Lang, Range } from "@/lib/dates";
+import { deepMerge } from "@/lib/deepMerge";
 
 export type VariableId = "precipitation" | "no2" | "evapotranspiration" | "temperature";
 export type Mode = "explorador" | "cientifico";
@@ -71,12 +73,27 @@ function toConfig(id: VariableId, raw: RawVariable): VariableConfig {
   };
 }
 
-export const VARIABLES: Record<VariableId, VariableConfig> = {
-  precipitation: toConfig("precipitation", products.variables.precipitation),
-  no2: toConfig("no2", products.variables.no2),
-  evapotranspiration: toConfig("evapotranspiration", products.variables.evapotranspiration),
-  temperature: toConfig("temperature", products.variables.temperature),
+function buildVariables(source: typeof products): Record<VariableId, VariableConfig> {
+  return {
+    precipitation: toConfig("precipitation", source.variables.precipitation),
+    no2: toConfig("no2", source.variables.no2),
+    evapotranspiration: toConfig("evapotranspiration", source.variables.evapotranspiration),
+    temperature: toConfig("temperature", source.variables.temperature),
+  };
+}
+
+/**
+ * Variables en cada idioma. products.en.json solo trae los textos en inglés y se
+ * mezcla sobre products.json, así que escalas, colores y fechas son los mismos.
+ * En componentes usa useVariables() (src/i18n), que elige el idioma activo.
+ */
+export const VARIABLES_BY_LANG: Record<Lang, Record<VariableId, VariableConfig>> = {
+  es: buildVariables(products),
+  en: buildVariables(deepMerge(products, productsEn) as typeof products),
 };
+
+/** Variables en español (para la lógica que no muestra texto: escalas, fechas, colores). */
+export const VARIABLES = VARIABLES_BY_LANG.es;
 
 export const STUDY_PERIOD: Range = products.study_period;
 export const COMPARISON_PERIOD: Range = {

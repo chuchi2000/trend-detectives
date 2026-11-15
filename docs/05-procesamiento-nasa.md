@@ -1,5 +1,7 @@
 # 5. Procesamiento NASA
 
+> ¿Quieres 2004–2025 en horas y no en días? Usa la [descarga rápida](09-descarga-rapida.md).
+
 Esta guía explica cómo pasar de los archivos de NASA a mapas mensuales que la API pueda
 servir. Los fundamentos de cada decisión están en
 [`metadata/documentation/auditoria-productos.md`](../metadata/documentation/auditoria-productos.md).

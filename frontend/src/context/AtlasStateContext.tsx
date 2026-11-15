@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type Dispatch, type ReactNode } from "react";
 
+import { useLanguage } from "@/i18n/language";
+
 import { atlasReducer, stateFromSearch, stateToSearch, type AtlasAction, type AtlasState } from "./atlasState";
 
 interface AtlasContextValue {
@@ -16,13 +18,14 @@ const AtlasContext = createContext<AtlasContextValue | null>(null);
  */
 export function AtlasStateProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(atlasReducer, undefined, () => stateFromSearch(window.location.search));
+  const { lang } = useLanguage();
 
   useEffect(() => {
-    const search = stateToSearch(state);
+    const search = stateToSearch(state, lang);
     if (window.location.search !== search) {
       window.history.replaceState(window.history.state, "", `${window.location.pathname}${search}`);
     }
-  }, [state]);
+  }, [state, lang]);
 
   useEffect(() => {
     const onPop = () => dispatch({ type: "replace", state: stateFromSearch(window.location.search) });

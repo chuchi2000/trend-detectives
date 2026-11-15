@@ -10,6 +10,8 @@ Ejecutar desde la carpeta backend/ con el entorno virtual activo:
     python -m processing.cli comparativo
     python -m processing.cli limites            (descarga del servicio web del INEGI)
     python -m processing.cli catalogo
+    python -m processing.cli ee-login
+    python -m processing.cli rapido --inicio 2004-01 --fin 2025-12
 
 Por defecto cada variable descarga y luego procesa. Usa --solo-descarga o
 --solo-proceso para separar los pasos. Empieza siempre con un mes de prueba.
@@ -19,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 
 from app.core.config import load_dotenv_into_environ
@@ -132,6 +135,41 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub.add_parser("catalogo", help="Muestra lo que ya está procesado")
 
+    sub.add_parser("ee-login", help="Conecta tu cuenta de Google Earth Engine (una sola vez)")
+    fast = sub.add_parser(
+        "rapido",
+        help="Descarga rápida: Earth Engine (precipitación, ET, temperatura) + Harmony (NO₂)",
+        description=(
+            "Calcula los meses en los servidores de Google y NASA y descarga solo México. "
+            "Al final reconstruye la malla comparativa. Ver docs/09-descarga-rapida.md."
+        ),
+    )
+    fast.add_argument("--inicio", type=_range, required=True, help="Primer mes, AAAA-MM")
+    fast.add_argument("--fin", type=_range, required=True, help="Último mes, AAAA-MM")
+    fast.add_argument(
+        "--variables",
+        nargs="*",
+        choices=list(ALIASES),
+        default=list(ALIASES),
+        help="Por defecto, las cuatro",
+    )
+    fast.add_argument(
+        "--resolucion-mapa",
+        type=float,
+        default=0.025,
+        help="Malla del mapa para evapotranspiración y temperatura, en grados (0.025 ≈ 2.8 km)",
+    )
+    fast.add_argument(
+        "--hilos", type=int, default=6, help="Meses calculados a la vez en Earth Engine"
+    )
+    fast.add_argument("--min-dias", type=int, default=3, help="NO₂: días válidos mínimos por celda")
+    fast.add_argument(
+        "--qc-estricto", action="store_true", help="ET: descartar píxeles con bit 0 de ET_QC = 1"
+    )
+    fast.add_argument(
+        "--forzar", action="store_true", help="Recalcular meses ya hechos en Earth Engine"
+    )
+
     args = parser.parse_args(argv)
     log = logging.getLogger("atlas.cli")
     try:
@@ -162,6 +200,23 @@ def main(argv: list[str] | None = None) -> int:
                 inegi_service.build(
                     tolerance=args.tolerancia, municipal_tolerance=args.tolerancia_municipios
                 )
+        elif args.command == "ee-login":
+            from processing.fast import earth_engine
+
+            earth_engine.authenticate()
+        elif args.command == "rapido":
+            from processing.fast import run as fast_run
+
+            fast_run.run_all(
+                [ALIASES[v] for v in args.variables],
+                args.inicio,
+                args.fin,
+                map_res=args.resolucion_mapa,
+                workers=args.hilos,
+                min_days=args.min_dias,
+                strict=args.qc_estricto,
+                force=args.forzar,
+            )
         elif args.command == "catalogo":
             from processing.common.paths import context
 
@@ -173,8 +228,16 @@ def main(argv: list[str] | None = None) -> int:
                 print(
                     f"{e.variable:<20} {e.level:<12} {e.date or (str(e.start) + '…' + str(e.end)):<17} {e.path}"
                 )
+    except KeyboardInterrupt:
+        log.warning(
+            "Detenido por el usuario. Lo que ya terminó quedó guardado; vuelve a ejecutar el "
+            "mismo comando para continuar."
+        )
+        logging.shutdown()
+        os._exit(130)  # no esperar a que terminen las descargas que estaban en curso
     except ImportError as exc:
-        log.error('Falta una librería: %s. Instala: pip install -e ".[processing]"', exc.name)
+        extra = "processing,rapido" if exc.name in ("ee", "harmony") else "processing"
+        log.error('Falta una librería: %s. Instala: pip install -e ".[%s]"', exc.name, extra)
         return 2
     except (AtlasError, RuntimeError, FileNotFoundError, ValueError) as exc:
         log.error("%s", exc)

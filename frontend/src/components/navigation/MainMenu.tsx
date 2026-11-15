@@ -2,6 +2,7 @@ import { BookOpen, Database, Home, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/i18n/language";
 
 export interface MenuAction {
   id: string;
@@ -19,6 +20,7 @@ const ICONS = { inicio: Home, glosario: BookOpen, fuentes: Database };
  */
 export function MainMenu({ actions }: { actions: MenuAction[] }) {
   const [open, setOpen] = useState(false);
+  const { t } = useLanguage();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +51,7 @@ export function MainMenu({ actions }: { actions: MenuAction[] }) {
         ref={buttonRef}
         variant="ghost"
         size="icon"
-        aria-label={open ? "Cerrar menú" : "Abrir menú"}
+        aria-label={open ? t.header.closeMenu : t.header.openMenu}
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => setOpen((o) => !o)}

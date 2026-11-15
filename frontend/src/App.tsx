@@ -1,4 +1,5 @@
 import { AtlasStateProvider } from "@/context/AtlasStateContext";
+import { LanguageProvider } from "@/i18n/LanguageProvider";
 import { useRoute } from "@/hooks/useRoute";
 import { AtlasPage } from "@/pages/AtlasPage";
 import { WelcomePage } from "@/pages/WelcomePage";
@@ -10,12 +11,15 @@ import { WelcomePage } from "@/pages/WelcomePage";
  */
 export default function App() {
   const [route, navigate] = useRoute();
-  if (route === "inicio") {
-    return <WelcomePage onEnter={(mode) => navigate("atlas", `?modo=${mode}`)} />;
-  }
   return (
-    <AtlasStateProvider>
-      <AtlasPage onHome={() => navigate("inicio")} />
-    </AtlasStateProvider>
+    <LanguageProvider>
+      {route === "inicio" ? (
+        <WelcomePage onEnter={(mode) => navigate("atlas", `?modo=${mode}`)} />
+      ) : (
+        <AtlasStateProvider>
+          <AtlasPage onHome={() => navigate("inicio")} />
+        </AtlasStateProvider>
+      )}
+    </LanguageProvider>
   );
 }

@@ -5,6 +5,8 @@
  * backend ({"error": {"code", "message"}}) en ApiError con un mensaje en
  * español listo para mostrarse. Las credenciales de NASA nunca pasan por aquí.
  */
+import type { FeatureCollection } from "geojson";
+
 import type { VariableId } from "@/config/variables";
 import type {
   ApiErrorBody,
@@ -17,8 +19,11 @@ import type {
   RegionsResponse,
   StatisticsResponse,
   TimeSeriesResponse,
+  TrendMapResponse,
   VariablesResponse,
 } from "@/services/types";
+import { MESSAGES } from "@/i18n/messages";
+import type { Lang } from "@/lib/dates";
 
 const BASE_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
@@ -35,11 +40,29 @@ export class ApiError extends Error {
 
 type Params = Record<string, string | number | boolean | null | undefined>;
 
+// Idioma de las respuestas de la API. Lo fija <LanguageProvider>; en español no se
+// envía nada (es el idioma por defecto del backend).
+let apiLang: Lang = "es";
+
+export function setApiLanguage(lang: Lang): void {
+  apiLang = lang;
+}
+
+export function getApiLanguage(): Lang {
+  return apiLang;
+}
+
+/** URL absoluta de un recurso que la API entrega con una ruta que ya empieza con /api. */
+export function apiAssetUrl(apiPath: string): string {
+  return `${BASE_URL}${apiPath}`;
+}
+
 export function buildUrl(path: string, params: Params = {}): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== null && value !== undefined && value !== "") search.set(key, String(value));
   }
+  if (apiLang !== "es") search.set("lang", apiLang);
   const query = search.toString();
   return `${BASE_URL}/api${path}${query ? `?${query}` : ""}`;
 }
@@ -51,7 +74,7 @@ async function request<T>(path: string, params: Params = {}, signal?: AbortSigna
   } catch (error) {
     if ((error as Error).name === "AbortError") throw error;
     throw new ApiError(
-      "No se pudo conectar con el servidor del Atlas. Revisa que el backend esté en marcha.",
+      MESSAGES[apiLang].api.noConnection,
       "sin_conexion",
       0,
     );
@@ -66,8 +89,8 @@ async function request<T>(path: string, params: Params = {}, signal?: AbortSigna
     if (body && "error" in body) throw new ApiError(body.error.message, body.error.code, response.status);
     throw new ApiError(
       response.status === 422
-        ? "Los parámetros de la consulta no son válidos."
-        : `El servidor respondió con un error (${response.status}).`,
+        ? MESSAGES[apiLang].api.invalidParams
+        : MESSAGES[apiLang].api.serverError(response.status),
       "error_http",
       response.status,
     );
@@ -96,12 +119,14 @@ export const api = {
     request<TimeSeriesResponse>("/timeseries", { variable, ...target, ...range }, signal),
   correlation: (a: VariableId, b: VariableId, target: Target, signal?: AbortSignal) =>
     request<CorrelationResponse>("/correlation", { a, b, ...target }, signal),
+  trendMap: (variable: VariableId, range: { start?: string; end?: string } = {}, signal?: AbortSignal) =>
+    request<TrendMapResponse>(`/trend-map/${variable}`, range, signal),
   compare: (variable: VariableId, a: string, b: string, region: string, signal?: AbortSignal) =>
     request<CompareResponse>("/compare", { variable, a, b, region }, signal),
   regions: (level: "state" | "municipality", state?: string, signal?: AbortSignal) =>
     request<RegionsResponse>("/regions", { level, estado: state }, signal),
   regionsGeojson: (level: "state" | "municipality", state?: string, signal?: AbortSignal) =>
-    request<GeoJSON.FeatureCollection>("/regions/geojson", { level, estado: state }, signal),
+    request<FeatureCollection>("/regions/geojson", { level, estado: state }, signal),
 };
 
 export const exportUrls = {

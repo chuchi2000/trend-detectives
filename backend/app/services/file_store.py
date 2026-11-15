@@ -19,12 +19,24 @@ import numpy as np
 
 from app.core.config import Settings
 from app.core.errors import AtlasError, NotProcessed
+from app.core.i18n import catalog_note, tr
 from app.services.catalog import Catalog, CatalogEntry
 from app.services.colormaps import interval_colormap_param
 from app.services.dates import format_ym, human_ym, parse_ym, ym_index
 from app.services.grid import CommonGrid
 from app.services.products import ProductCatalog
 from app.services.regions import RegionService
+
+
+def _resolution_text(entry: CatalogEntry, product: dict[str, Any]) -> str:
+    """Resolución real del archivo del mapa (puede ser la de Earth Engine, p. ej. 0.025°)."""
+    native = product["spatial"]["native_resolution"]
+    res = entry.resolution_deg
+    if res is None:
+        return native
+    km = res * 111.32
+    text = f"{res:g}° (≈ {km:.1f} km)" if km < 10 else f"{res:g}° (≈ {km:.0f} km)"
+    return text if text.split(" ")[0] not in native else native
 
 
 class MissingGeoLibraries(AtlasError):
@@ -37,8 +49,17 @@ def _require(module: str) -> Any:
         return __import__(module)
     except ImportError as exc:
         raise MissingGeoLibraries(
-            f"El modo DATOS REALES necesita '{module}'. Instala: pip install -e \".[geo]\""
+            tr(
+                f"El modo DATOS REALES necesita '{module}'. Instala: pip install -e \".[geo]\"",
+                f"REAL DATA mode needs '{module}'. Install: pip install -e \".[geo]\"",
+            )
         ) from exc
+
+
+# Variables globales (con valores sobre el mar y otros países) que el mapa recorta
+# al contorno de México. Temperatura y evapotranspiración solo existen sobre tierra
+# y se dejan como están. Solo afecta la IMAGEN: datos, estadísticas y descargas no cambian.
+CLIP_TO_COUNTRY = frozenset({"precipitation", "no2"})
 
 
 class FileStore:
@@ -58,6 +79,8 @@ class FileStore:
         self.catalog = catalog
         self.regions = regions
         self._datasets: dict[str, Any] = {}
+        self._image_cache: dict[tuple[str, int], bytes] = {}
+        self._country_masks: dict[tuple[Any, ...], np.ndarray] = {}
 
     # -- utilidades ---------------------------------------------------------
     def _native_entry(self, variable: str, year: int, month: int) -> CatalogEntry:
@@ -67,9 +90,14 @@ class FileStore:
         entry = self.catalog.find(variable, "native", date)
         if entry is None:
             name = self.products.get(variable)["name"]
+            command = f"python -m processing.cli {variable} --inicio {date} --fin {date}"
             raise NotProcessed(
-                f"{name} de {human_ym(date)} todavía no se ha descargado ni procesado. "
-                f"Ejecuta: python -m processing.cli {variable} --inicio {date} --fin {date}"
+                tr(
+                    f"{name} de {human_ym(date)} todavía no se ha descargado ni procesado. "
+                    f"Ejecuta: {command}",
+                    f"{name} for {human_ym(date)} has not been downloaded or processed yet. "
+                    f"Run: {command}",
+                )
             )
         return entry
 
@@ -78,7 +106,12 @@ class FileStore:
         entry = self.catalog.find(variable, "comparative", None)
         if entry is None:
             raise NotProcessed(
-                "Aún no existe el cubo comparativo de 0.25°. Ejecuta: python -m processing.cli comparativo"
+                tr(
+                    "Aún no existe el cubo comparativo de 0.25°. "
+                    "Ejecuta: python -m processing.cli comparativo",
+                    "The 0.25° comparative cube does not exist yet. "
+                    "Run: python -m processing.cli comparativo",
+                )
             )
         if variable not in self._datasets:
             xr = _require("xarray")
@@ -109,7 +142,12 @@ class FileStore:
         try:
             data = ds[variable].sel(time=date).values
         except KeyError as exc:
-            raise NotProcessed(f"El cubo comparativo no contiene {human_ym(date)}.") from exc
+            raise NotProcessed(
+                tr(
+                    f"El cubo comparativo no contiene {human_ym(date)}.",
+                    f"The comparative cube does not contain {human_ym(date)}.",
+                )
+            ) from exc
         return np.asarray(data, dtype="float32").reshape(self.grid.shape)
 
     def cube(self, variable: str, start: str, end: str) -> tuple[list[str], np.ndarray]:
@@ -125,9 +163,64 @@ class FileStore:
         times = [str(t)[:7] for t in sub["time"].values.astype("datetime64[M]")]
         return times, np.asarray(sub.values, dtype="float32")
 
+    def _read_native(self, entry: CatalogEntry) -> tuple[np.ndarray, Any]:
+        rasterio = _require("rasterio")
+        path = self.settings.data_dir / entry.path
+        with rasterio.open(path) as src:
+            data = src.read(1, masked=True).astype("float32").filled(np.nan)
+            return data, src.transform
+
+    def _native_bounds(self, entry: CatalogEntry) -> tuple[float, float, float, float]:
+        rasterio = _require("rasterio")
+        with rasterio.open(self.settings.data_dir / entry.path) as src:
+            b = src.bounds
+            return b.left, b.bottom, b.right, b.top
+
+    def map_image(self, variable: str, year: int, month: int) -> bytes:
+        """PNG del mes (ver app/services/map_image.py). Se guarda en memoria por archivo."""
+        entry = self._native_entry(variable, year, month)
+        path = self.settings.data_dir / entry.path
+        key = (str(path), path.stat().st_mtime_ns if path.exists() else 0)
+        cached = self._image_cache.get(key)
+        if cached is None:
+            from app.services import map_image
+
+            values, transform = self._read_native(entry)
+            if variable in CLIP_TO_COUNTRY:
+                mask = self._country_mask(values.shape, transform)
+                if mask is not None:
+                    values = np.where(mask, values, np.nan)
+            display = self.products.get(variable)["display"]
+            cached = map_image.render(values, transform.f, abs(transform.e), display)
+            if len(self._image_cache) >= 64:
+                self._image_cache.pop(next(iter(self._image_cache)))
+            self._image_cache[key] = cached
+        return cached
+
+    def _country_mask(self, shape: tuple[int, ...], transform: Any) -> np.ndarray | None:
+        """True dentro de México para un ráster con esta forma y transformación.
+
+        Se rasteriza el contorno del INEGI (rasterio, milisegundos) y se guarda en
+        memoria: todos los meses de una variable comparten la misma malla.
+        """
+        key = (tuple(shape), tuple(transform)[:6])
+        if key not in self._country_masks:
+            geometry = self.regions.national_geometry()
+            if geometry is None:
+                return None
+            _require("rasterio")
+            from rasterio.features import geometry_mask
+
+            self._country_masks[key] = geometry_mask(
+                [geometry], out_shape=tuple(shape)[:2], transform=transform, invert=True
+            )
+        return self._country_masks[key]
+
     def map_layer(self, variable: str, year: int, month: int) -> dict[str, Any]:
         entry = self._native_entry(variable, year, month)
         display = self.products.get(variable)["display"]
+        if self.settings.map_mode == "imagen":
+            return self._image_layer(variable, year, month, entry)
         cog_url = f"{self.settings.titiler_data_dir}/{entry.path}"
         colormap = quote(interval_colormap_param(display))
         tile = (
@@ -148,9 +241,39 @@ class FileStore:
                 "coverage": entry.coverage,
                 "n_valid": entry.n_valid,
                 "flags": list(entry.quality.get("flags", [])),
-                "notes": list(entry.quality.get("notes", [])),
+                "notes": [catalog_note(n) for n in entry.quality.get("notes", [])],
                 "details": {k: v for k, v in entry.quality.items() if k not in {"flags", "notes"}},
             },
+        }
+
+    def _quality(self, entry: CatalogEntry) -> dict[str, Any]:
+        return {
+            "coverage": entry.coverage,
+            "n_valid": entry.n_valid,
+            "flags": list(entry.quality.get("flags", [])),
+            "notes": [catalog_note(n) for n in entry.quality.get("notes", [])],
+            "details": {k: v for k, v in entry.quality.items() if k not in {"flags", "notes"}},
+        }
+
+    def _image_layer(
+        self, variable: str, year: int, month: int, entry: CatalogEntry
+    ) -> dict[str, Any]:
+        from app.services.map_image import corners
+
+        west, south, east, north = self._native_bounds(entry)
+        product = self.products.get(variable)["product"]
+        return {
+            "layer": {
+                "kind": "image",
+                "image": {
+                    "url": f"/api/layers/{variable}/image.png?year={year}&month={month}",
+                    "coordinates": corners(west, south, east, north),
+                },
+                "bounds": [west, south, east, north],
+                "attribution": f"NASA {product['provider']} · {product['short_name']} v{product['version']}",
+            },
+            "resolution": _resolution_text(entry, self.products.get(variable)),
+            "quality": self._quality(entry),
         }
 
     def point_value(

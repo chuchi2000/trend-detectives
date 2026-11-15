@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from app.api.routes import analysis, catalog, export, layers, regions
 from app.core.config import get_settings
 from app.core.errors import AtlasError
+from app.core.i18n import reset_lang, set_lang, tr
 from app.core.logging import configure_logging
 from app.services.atlas import VERSION
 
@@ -71,11 +72,44 @@ async def unexpected_error_handler(request: Request, exc: Exception) -> JSONResp
         content={
             "error": {
                 "code": "error_interno",
-                "message": "Ocurrió un error inesperado. Revisa los logs del backend.",
+                "message": tr(
+                    "Ocurrió un error inesperado. Revisa los logs del backend.",
+                    "An unexpected error occurred. Check the backend logs.",
+                ),
             }
         },
     )
 
+
+class LanguageMiddleware:
+    """Idioma de la respuesta: ?lang=en|es o, si no viene, el encabezado Accept-Language.
+
+    Middleware ASGI puro (no BaseHTTPMiddleware) para que la ContextVar del idioma
+    llegue a las rutas síncronas que FastAPI ejecuta en su grupo de hilos.
+    """
+
+    def __init__(self, app_: object) -> None:
+        self.app = app_
+
+    async def __call__(self, scope, receive, send):  # noqa: ANN001
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        from urllib.parse import parse_qs
+
+        query = parse_qs(scope.get("query_string", b"").decode("latin-1"))
+        value = (query.get("lang") or [None])[0]
+        if value is None:
+            headers = dict(scope.get("headers") or [])
+            value = headers.get(b"accept-language", b"").decode("latin-1") or None
+        token = set_lang(value)
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            reset_lang(token)
+
+
+app.add_middleware(LanguageMiddleware)
 
 for module in (catalog, layers, analysis, regions, export):
     app.include_router(module.router, prefix="/api")

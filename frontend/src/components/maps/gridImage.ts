@@ -1,6 +1,7 @@
 import type { VariableDisplay } from "@/config/variables";
 import { classIndex, hexToRgb } from "@/lib/classify";
-import type { GridPayload } from "@/services/types";
+import { TREND_ALPHA, TREND_RAMP, trendBreaks } from "@/config/trend";
+import type { GridPayload, TrendMapResponse } from "@/services/types";
 
 /**
  * Convierte la malla de valores (modo DEMO o malla comparativa) en una imagen
@@ -22,6 +23,32 @@ export function gridToImage(grid: GridPayload, display: VariableDisplay): string
     image.data[i * 4 + 1] = g;
     image.data[i * 4 + 2] = b;
     image.data[i * 4 + 3] = 235;
+  });
+  ctx.putImageData(image, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+/**
+ * Imagen del mapa de tendencia: escala divergente (azul baja, rojo sube) y los
+ * píxeles NO significativos (p ≥ 0.05) más tenues. NaN queda transparente (sin dato).
+ */
+export function trendToImage(trend: TrendMapResponse, limit: number): string {
+  const { grid, significant } = trend;
+  const canvas = document.createElement("canvas");
+  canvas.width = grid.nx;
+  canvas.height = grid.ny;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+  const image = ctx.createImageData(grid.nx, grid.ny);
+  const colors = TREND_RAMP.map(hexToRgb);
+  const breaks = trendBreaks(limit);
+  grid.values.forEach((value, i) => {
+    if (value === null || !Number.isFinite(value)) return;
+    const [r, g, b] = colors[classIndex(value, breaks)] ?? [0, 0, 0];
+    image.data[i * 4] = r;
+    image.data[i * 4 + 1] = g;
+    image.data[i * 4 + 2] = b;
+    image.data[i * 4 + 3] = significant[i] ? TREND_ALPHA.significant : TREND_ALPHA.notSignificant;
   });
   ctx.putImageData(image, 0, 0);
   return canvas.toDataURL("image/png");

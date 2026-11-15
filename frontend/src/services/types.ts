@@ -68,9 +68,17 @@ export interface GridPayload {
   values: Array<number | null>;
 }
 
+export interface ImagePayload {
+  /** Ruta del PNG relativa a la API (empieza con /api). */
+  url: string;
+  /** Esquinas [lon, lat]: arriba-izq., arriba-der., abajo-der., abajo-izq. */
+  coordinates: number[][];
+}
+
 export interface LayerRef {
-  kind: "grid" | "tiles";
+  kind: "grid" | "tiles" | "image";
   grid?: GridPayload | null;
+  image?: ImagePayload | null;
   tiles?: string[] | null;
   tile_size?: number | null;
   bounds?: number[] | null;
@@ -188,7 +196,63 @@ export interface TimeSeriesResponse {
   end: string;
   points: SeriesPoint[];
   trend: Trend | null;
+  /** Tendencia sobre anomalías mensuales (en unidades de visualización). */
+  trend_monthly?: TrendMonthly | null;
   method: string;
+}
+
+/** Ver backend/app/schemas/models.py → TrendMonthly. */
+export interface TrendMonthly {
+  method: string;
+  unit: string;
+  slope_per_decade: number;
+  ci95: [number, number];
+  sen_slope_per_decade: number;
+  pct_change_per_decade: number | null;
+  /** Mann–Kendall con modificación de Hamed–Rao. */
+  p_value: number;
+  t_test_p_value: number;
+  significant: boolean;
+  direction: string;
+  lag1_autocorrelation: number;
+  effective_months: number;
+  mean: number;
+  months: number;
+  start: string;
+  end: string;
+  verdict: TrendVerdict;
+  verdict_label: string;
+  sentence: string;
+  notes: string[];
+  dates: string[];
+  anomalies: Array<number | null>;
+  trend_line: number[];
+}
+
+/** Ver backend/app/schemas/models.py → TrendMapResponse. Listas en el orden de grid.values. */
+export interface TrendMapResponse {
+  mode: DataMode;
+  variable: VariableId;
+  start: string;
+  end: string;
+  unit: string;
+  relative: boolean;
+  grid: GridPayload;
+  ci95_low: Array<number | null>;
+  ci95_high: Array<number | null>;
+  p_value: Array<number | null>;
+  significant: boolean[];
+  pct_change_per_decade: Array<number | null> | null;
+  summary: {
+    n_pixels: number;
+    fraction_up: number | null;
+    fraction_significant_up: number | null;
+    fraction_significant_down: number | null;
+    median_slope_per_decade: number | null;
+  };
+  method: string;
+  notes: string[];
+  seconds: number;
 }
 
 export interface CorrelationResponse {

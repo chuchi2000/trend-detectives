@@ -1,5 +1,6 @@
 import { VariableIcon } from "@/components/icons/VariableIcon";
-import { VARIABLES, VARIABLE_IDS, type VariableId } from "@/config/variables";
+import { VARIABLE_IDS, type VariableId } from "@/config/variables";
+import { useLanguage, useVariables } from "@/i18n/language";
 import { cn } from "@/lib/utils";
 
 /**
@@ -7,14 +8,16 @@ import { cn } from "@/lib/utils";
  * identidad de la variable (el mismo de su escala en el mapa).
  */
 export function VariableSelector({ value, onChange }: { value: VariableId; onChange: (id: VariableId) => void }) {
+  const { t } = useLanguage();
+  const variables = useVariables();
   return (
     <div
       role="group"
-      aria-label="Variable que se muestra en el mapa"
+      aria-label={t.variables.groupLabel}
       className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
     >
       {VARIABLE_IDS.map((id) => {
-        const v = VARIABLES[id];
+        const v = variables[id];
         const selected = id === value;
         return (
           <button

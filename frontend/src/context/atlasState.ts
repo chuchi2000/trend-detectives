@@ -9,7 +9,7 @@
  * Este archivo es lógica pura (sin React) para poder probarlo fácilmente.
  */
 import { VARIABLES, isVariableId, type Mode, type VariableId } from "@/config/variables";
-import { clampToRange, formatYm, humanYm, inRange, stepWithin, type YearMonth } from "@/lib/dates";
+import { clampToRange, formatYm, inRange, stepWithin, type Lang, type YearMonth } from "@/lib/dates";
 
 export interface RegionSelection {
   level: "state" | "municipality";
@@ -23,19 +23,32 @@ export interface LayerVisibility {
   municipalities: boolean;
 }
 
+/**
+ * Aviso para la persona. Se guarda como dato (no como texto) para escribirlo
+ * en el idioma activo al mostrarlo (ver AtlasPage).
+ */
+export type Notice =
+  | { kind: "clamped"; variable: VariableId; requested: YearMonth; shown: YearMonth }
+  | { kind: "edge" };
+
+/** Qué muestra el mapa: el valor del mes elegido o la tendencia de todo el periodo. */
+export type MapView = "valor" | "tendencia";
+
 export interface AtlasState {
   mode: Mode;
+  mapView: MapView;
   variable: VariableId;
   date: YearMonth;
   compare: { enabled: boolean; date: YearMonth };
   region: RegionSelection | null;
   point: { lat: number; lon: number } | null;
   layers: LayerVisibility;
-  notice: string | null;
+  notice: Notice | null;
 }
 
 export type AtlasAction =
   | { type: "setMode"; mode: Mode }
+  | { type: "setMapView"; view: MapView }
   | { type: "setVariable"; variable: VariableId }
   | { type: "setDate"; date: YearMonth }
   | { type: "stepMonth"; step: number }
@@ -49,6 +62,7 @@ export type AtlasAction =
 
 export const DEFAULT_STATE: AtlasState = {
   mode: "explorador",
+  mapView: "valor",
   variable: "precipitation",
   date: { year: 2015, month: 7 },
   compare: { enabled: false, date: { year: 2005, month: 7 } },
@@ -58,22 +72,19 @@ export const DEFAULT_STATE: AtlasState = {
   notice: null,
 };
 
-function adjustDate(variable: VariableId, date: YearMonth): { date: YearMonth; notice: string | null } {
+function adjustDate(variable: VariableId, date: YearMonth): { date: YearMonth; notice: Notice | null } {
   const availability = VARIABLES[variable].availability;
   if (inRange(date, availability)) return { date, notice: null };
   const clamped = clampToRange(date, availability);
-  return {
-    date: clamped,
-    notice:
-      `${VARIABLES[variable].name} no tiene datos para ${humanYm(date)}. ` +
-      `Mostramos ${humanYm(clamped)}; hay datos de ${humanYm(availability.start)} a ${humanYm(availability.end)}.`,
-  };
+  return { date: clamped, notice: { kind: "clamped", variable, requested: date, shown: clamped } };
 }
 
 export function atlasReducer(state: AtlasState, action: AtlasAction): AtlasState {
   switch (action.type) {
     case "setMode":
       return { ...state, mode: action.mode };
+    case "setMapView":
+      return { ...state, mapView: action.view };
     case "setVariable": {
       const { date, notice } = adjustDate(action.variable, state.date);
       const compare = adjustDate(action.variable, state.compare.date);
@@ -86,7 +97,7 @@ export function atlasReducer(state: AtlasState, action: AtlasAction): AtlasState
     case "stepMonth": {
       const next = stepWithin(state.date, action.step, VARIABLES[state.variable].availability);
       if (!next) {
-        return { ...state, notice: "Llegaste al límite de los datos disponibles para esta variable." };
+        return { ...state, notice: { kind: "edge" } };
       }
       return { ...state, date: next, notice: null };
     }
@@ -111,11 +122,12 @@ export function atlasReducer(state: AtlasState, action: AtlasAction): AtlasState
 
 // ---- URL ------------------------------------------------------------------
 
-export function stateToSearch(state: AtlasState): string {
+export function stateToSearch(state: AtlasState, lang: Lang = "es"): string {
   const params = new URLSearchParams();
   params.set("modo", state.mode);
   params.set("variable", state.variable);
   params.set("fecha", formatYm(state.date));
+  if (state.mapView === "tendencia") params.set("vista", "tendencia");
   if (state.compare.enabled) params.set("comparar", formatYm(state.compare.date));
   if (state.region) params.set("region", `${state.region.level === "state" ? "estado" : "municipio"}:${state.region.code}`);
   if (state.region) params.set("nombre", state.region.name);
@@ -124,6 +136,7 @@ export function stateToSearch(state: AtlasState): string {
     (k) => state.layers[k] !== DEFAULT_STATE.layers[k],
   );
   if (hidden.length) params.set("capas", hidden.map((k) => `${k}:${state.layers[k] ? 1 : 0}`).join(","));
+  if (lang === "en") params.set("lang", "en");
   return `?${params.toString()}`;
 }
 
@@ -167,6 +180,7 @@ export function stateFromSearch(search: string, base: AtlasState = DEFAULT_STATE
   return {
     ...base,
     mode: mode === "cientifico" || mode === "explorador" ? mode : base.mode,
+    mapView: params.get("vista") === "tendencia" ? "tendencia" : "valor",
     variable,
     date,
     compare: compareDate

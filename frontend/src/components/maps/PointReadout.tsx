@@ -3,7 +3,7 @@ import { MapPin, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusMessage } from "@/components/ui/status";
 import { useAtlas } from "@/context/AtlasStateContext";
-import { VARIABLES } from "@/config/variables";
+import { useLanguage, useVariables } from "@/i18n/language";
 import { useApi } from "@/hooks/useApi";
 import { classIndex } from "@/lib/classify";
 import { humanYm } from "@/lib/dates";
@@ -17,6 +17,8 @@ import { api } from "@/services/api";
 export function PointReadout() {
   const { state, dispatch } = useAtlas();
   const { point, variable, date, mode } = state;
+  const { lang, t } = useLanguage();
+  const variables = useVariables();
   const result = useApi(
     point ? (signal) => api.point(variable, date.year, date.month, point.lat, point.lon, signal) : null,
     [point?.lat, point?.lon, variable, date.year, date.month],
@@ -25,38 +27,37 @@ export function PointReadout() {
     return (
       <p className="flex items-center gap-2 text-sm text-texto-suave">
         <MapPin aria-hidden="true" className="size-4 text-acento" />
-        Haz clic en el mapa para consultar el valor de un lugar.
+        {t.point.prompt}
       </p>
     );
   }
-  const v = VARIABLES[variable];
+  const v = variables[variable];
   const value = result.data?.display_value ?? null;
   const level = value === null ? null : classIndex(value, v.display.breaks);
   const words =
-    level === null ? null : level <= 2 ? "bajo" : level <= 5 ? "intermedio" : "alto";
+    level === null ? null : level <= 2 ? t.point.low : level <= 5 ? t.point.medium : t.point.high;
 
   return (
     <section aria-live="polite" className="flex flex-col gap-2 rounded-2xl border border-borde bg-panel p-4">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-display text-sm font-semibold text-texto">Lugar consultado</p>
-          <p className="font-display text-xs text-texto-suave font-semicondensada cifras">{formatCoord(point.lat, point.lon)}</p>
+          <p className="font-display text-sm font-semibold text-texto">{t.point.title}</p>
+          <p className="font-display text-xs text-texto-suave font-semicondensada cifras">{formatCoord(point.lat, point.lon, lang)}</p>
         </div>
-        <Button size="icon" variant="ghost" aria-label="Quitar el punto" onClick={() => dispatch({ type: "setPoint", point: null })}>
+        <Button size="icon" variant="ghost" aria-label={t.common.removePoint} onClick={() => dispatch({ type: "setPoint", point: null })}>
           <X aria-hidden="true" />
         </Button>
       </div>
-      {result.status === "loading" && <p className="text-sm text-texto-suave">Consultando…</p>}
+      {result.status === "loading" && <p className="text-sm text-texto-suave">{t.point.querying}</p>}
       {result.status === "error" && <StatusMessage kind="error">{result.error.message}</StatusMessage>}
       {result.status === "success" &&
         (value === null ? (
           <p className="text-sm text-texto-suave">
-            Sin dato en este lugar para {humanYm(date)} (fuera del territorio, nubes o superficie que el producto no
-            calcula).
+            {t.point.noData(humanYm(date, lang))}
           </p>
         ) : mode === "explorador" ? (
           <p className="text-[15px] leading-relaxed text-texto">
-            En {humanYm(date)}, aquí el valor fue <strong>{words}</strong> comparado con la escala del mapa:{" "}
+            {t.point.explorerBefore(humanYm(date, lang))} <strong>{words}</strong> {t.point.explorerMiddle}{" "}
             <strong className="cifras">
               {formatNumber(value)} {v.display.displayUnit}
             </strong>
@@ -64,15 +65,15 @@ export function PointReadout() {
           </p>
         ) : (
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-            <dt className="text-texto-suave">Valor</dt>
+            <dt className="text-texto-suave">{t.point.value}</dt>
             <dd className="font-display font-semibold font-semicondensada cifras">
               {formatNumber(value, 2)} {v.display.displayUnit}
             </dd>
-            <dt className="text-texto-suave">Celda</dt>
+            <dt className="text-texto-suave">{t.point.cell}</dt>
             <dd className="font-display font-semicondensada cifras">
-              {result.data.cell ? formatCoord(result.data.cell.lat, result.data.cell.lon) : "—"}
+              {result.data.cell ? formatCoord(result.data.cell.lat, result.data.cell.lon, lang) : "—"}
             </dd>
-            <dt className="text-texto-suave">Resolución</dt>
+            <dt className="text-texto-suave">{t.point.resolution}</dt>
             <dd className="font-display font-semicondensada">{result.data.resolution}</dd>
           </dl>
         ))}

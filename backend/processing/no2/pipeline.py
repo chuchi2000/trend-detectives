@@ -79,12 +79,11 @@ def _day_from_name(path: Path) -> date | None:
 
 def download_month(year: int, month: int, keep_global: bool = False) -> Path:
     import earthaccess
-    import xarray as xr
 
     paths, products, _ = context()
     products.require_available(VARIABLE, year, month)
     product = products.get(VARIABLE)["product"]
-    out = paths.raw(VARIABLE) / f"OMNO2d_{product['version']}_mexico_{year:04d}-{month:02d}.nc"
+    out = raw_month_path(paths.raw(VARIABLE), product["version"], year, month)
     if out.exists():
         logger.info(
             "OMNO2d %04d-%02d ya descargado (%s); se omite. Bórralo para repetir.",
@@ -117,17 +116,52 @@ def download_month(year: int, month: int, keep_global: bool = False) -> Path:
     if not layers:
         raise RuntimeError(f"No se pudo leer ningún archivo diario de {year}-{month:02d}.")
 
-    ds = xr.Dataset(
-        {FIELD_SUFFIX: (("time", "lat", "lon"), np.stack(layers), {"units": "molec/cm2"})},
-        coords={"time": np.array(days), "lat": lats, "lon": lons},
-        attrs={
-            "source_product": f"OMNO2d v{product['version']}",
-            "note": "Recorte a México de los archivos diarios; valores originales.",
-        },
+    write_month_subset(
+        out,
+        days,
+        layers,
+        lats,
+        lons,
+        product["version"],
+        "Recorte a México de los archivos diarios; valores originales.",
     )
-    ds.to_netcdf(out, encoding={FIELD_SUFFIX: {"zlib": True, "complevel": 4}})
     if not keep_global:
         shutil.rmtree(tmp, ignore_errors=True)
+    return out
+
+
+def raw_month_path(raw_dir: Path, version: str, year: int, month: int) -> Path:
+    return raw_dir / f"OMNO2d_{version}_mexico_{year:04d}-{month:02d}.nc"
+
+
+def write_month_subset(
+    out: Path,
+    days: list[np.datetime64],
+    layers: list[np.ndarray],
+    lats: np.ndarray,
+    lons: np.ndarray,
+    version: str,
+    note: str,
+) -> Path:
+    """Guarda los días de un mes ya recortados a México (valores originales, norte arriba)."""
+    import xarray as xr
+
+    order = np.argsort(np.array(days))
+    ds = xr.Dataset(
+        {
+            FIELD_SUFFIX: (
+                ("time", "lat", "lon"),
+                np.stack([layers[i] for i in order]),
+                {"units": "molec/cm2"},
+            )
+        },
+        coords={"time": np.array(days)[order], "lat": lats, "lon": lons},
+        attrs={"source_product": f"OMNO2d v{version}", "note": note},
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_suffix(".tmp.nc")
+    ds.to_netcdf(tmp, encoding={FIELD_SUFFIX: {"zlib": True, "complevel": 4}})
+    tmp.replace(out)
     return out
 
 
