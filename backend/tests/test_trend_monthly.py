@@ -135,12 +135,12 @@ def test_timeseries_includes_monthly_trend_and_keeps_old_trend(client):
     assert monthly["sentence"]
 
 
-def test_trend_map_is_clipped_to_mexico_only_for_global_variables(client, demo_service):
-    """Precipitación y NO₂ se recortan al país en la vista; temperatura no se toca."""
+def test_trend_map_is_clipped_to_mexico(client, demo_service):
+    """Las cuatro variables se recortan al país en la vista del mapa."""
     outside = ~demo_service.store.national_mask().ravel()
     no2 = client.get("/api/trend-map/no2").json()
     assert all(v is None for v, out in zip(no2["grid"]["values"], outside, strict=True) if out)
     assert not any(s for s, out in zip(no2["significant"], outside, strict=True) if out)
     from app.services.file_store import CLIP_TO_COUNTRY
 
-    assert {"precipitation", "no2"} == CLIP_TO_COUNTRY
+    assert {"precipitation", "no2", "evapotranspiration", "temperature"} == CLIP_TO_COUNTRY

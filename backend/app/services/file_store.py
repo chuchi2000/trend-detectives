@@ -56,10 +56,9 @@ def _require(module: str) -> Any:
         ) from exc
 
 
-# Variables globales (con valores sobre el mar y otros países) que el mapa recorta
-# al contorno de México. Temperatura y evapotranspiración solo existen sobre tierra
-# y se dejan como están. Solo afecta la IMAGEN: datos, estadísticas y descargas no cambian.
-CLIP_TO_COUNTRY = frozenset({"precipitation", "no2"})
+# Variables que el mapa recorta al contorno de México (lo de fuera queda transparente).
+# Solo afecta la IMAGEN y la vista de tendencia: datos, estadísticas y descargas no cambian.
+CLIP_TO_COUNTRY = frozenset({"precipitation", "no2", "evapotranspiration", "temperature"})
 
 
 class FileStore:
