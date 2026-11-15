@@ -19,6 +19,9 @@ from trends import analyze_trend, remove_seasonality
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "data" / "processed"
 
+# No % change for these: °C has an arbitrary zero, so a percentage means nothing
+NO_PERCENT = {"temperature"}
+
 
 def read_series(path: Path) -> pd.Series:
     table = pd.read_csv(path)
@@ -35,7 +38,7 @@ def main():
             region = path.stem
             reg_info = catalog["regions"][region]
             series = read_series(path)
-            r = analyze_trend(series)
+            r = analyze_trend(series, relative=variable not in NO_PERCENT)
 
             regions.append({"id": region, "name": reg_info["name"],
                             "lat": reg_info["lat"], "lon": reg_info["lon"], **r})
@@ -62,8 +65,9 @@ def main():
     summary = pd.DataFrame(rows)
     summary.to_csv(DATA / "trends_summary.csv", index=False)
     with pd.option_context("display.width", 200, "display.max_columns", 20):
-        print(summary[["variable", "region", "slope_per_decade", "units",
-                       "pct_change_per_decade", "p_value", "significant"]].to_string(index=False))
+        print(summary[["variable", "region", "slope_per_decade", "sen_slope_per_decade", "units",
+                       "ci95_low", "ci95_high", "p_value", "t_test_p_value",
+                       "significant"]].to_string(index=False))
 
 
 if __name__ == "__main__":

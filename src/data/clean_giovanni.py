@@ -7,6 +7,7 @@ For each file it:
   - Detects the variable (from the column name) and the region (from the
     "User Bounding Box" in the header).
   - Removes fill values and converts units.
+  - Turns daily data (NO2) into monthly means.
   - Saves data/processed/<variable>/<region>.csv with columns date,value
     and updates data/processed/catalog.json.
 """
@@ -41,18 +42,40 @@ def _mm_per_hour_to_mm_per_month(series):
     return series * 24 * series.index.days_in_month
 
 
+def _kg_per_m2_per_s_to_mm_per_month(series):
+    # GLDAS fluxes are mean rates in kg/m²/s; 1 kg of water over 1 m² is 1 mm,
+    # so multiply by the seconds in each month
+    return series * 86400 * series.index.days_in_month
+
+
+def _scale_no2(series):
+    return series / 1e15
+
+
 VARIABLES = {
     "M2TMNXSLV_5_12_4_T2M": {
         "variable": "temperature", "name": "Air temperature at 2 m",
         "source": "MERRA-2 (M2TMNXSLV v5.12.4)", "units": "°C",
-        "convert": _kelvin_to_celsius,
+        "convert": _kelvin_to_celsius, "daily": False,
     },
     "GPM_3IMERGM_07_precipitation": {
         "variable": "precipitation", "name": "Precipitation",
         "source": "GPM IMERG Final (GPM_3IMERGM v07)", "units": "mm/month",
-        "convert": _mm_per_hour_to_mm_per_month,
+        "convert": _mm_per_hour_to_mm_per_month, "daily": False,
+    },
+    "GLDAS_NOAH025_M_2_1_Evap_tavg": {
+        "variable": "evapotranspiration", "name": "Evapotranspiration",
+        "source": "GLDAS Noah (GLDAS_NOAH025_M v2.1)", "units": "mm/month",
+        "convert": _kg_per_m2_per_s_to_mm_per_month, "daily": False,
+    },
+    "OMNO2d_004_ColumnAmountNO2TropCloudScreened": {
+        "variable": "no2", "name": "Tropospheric NO₂ (air pollution)",
+        "source": "OMI (OMNO2d v004)", "units": "10¹⁵ molecules/cm²",
+        "convert": _scale_no2, "daily": True,
     },
 }
+
+MIN_DAYS_PER_MONTH = 5  # for daily data: months with fewer valid days are left empty
 
 
 def read_giovanni(path: Path):
@@ -101,11 +124,19 @@ def clean(path: Path):
     fill = float([v for k, v in meta.items() if k.startswith("Fill Value")][0])
     series = series.where(~np.isclose(series, fill, rtol=1e-6) & (series.abs() < 1e20))
 
+    # Daily -> monthly
+    valid_days = None
+    if var["daily"]:
+        valid_days = series.resample("MS").count()
+        series = series.resample("MS").mean().where(valid_days >= MIN_DAYS_PER_MONTH)
+
     series = var["convert"](series)
 
     target = OUTPUT / var["variable"] / f"{region}.csv"
     target.parent.mkdir(parents=True, exist_ok=True)
     table = pd.DataFrame({"date": series.index.strftime("%Y-%m"), "value": series.round(4).values})
+    if valid_days is not None:
+        table["valid_days"] = valid_days.values
     table.to_csv(target, index=False)
 
     valid = series.dropna()

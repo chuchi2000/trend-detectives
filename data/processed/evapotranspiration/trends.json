@@ -1,0 +1,127 @@
+{
+  "variable": "evapotranspiration",
+  "name": "Evapotranspiration",
+  "source": "GLDAS Noah (GLDAS_NOAH025_M v2.1)",
+  "units": "mm/month",
+  "period": {
+    "start": "2000-01",
+    "end": "2025-12"
+  },
+  "regions": [
+    {
+      "id": "hermosillo",
+      "name": "Hermosillo",
+      "lat": 29.07,
+      "lon": -110.96,
+      "slope_per_decade": -0.812,
+      "ci95": [
+        -2.9628,
+        1.3389
+      ],
+      "sen_slope_per_decade": -0.4246,
+      "pct_change_per_decade": -2.62,
+      "p_value": 0.6821336430143803,
+      "t_test_p_value": 0.4560625100999305,
+      "significant": false,
+      "direction": "no trend",
+      "lag1_autocorrelation": 0.462,
+      "effective_months": 114.8,
+      "mean": 30.9495,
+      "months": 312,
+      "start": "2000-01",
+      "end": "2025-12"
+    },
+    {
+      "id": "merida",
+      "name": "Mérida",
+      "lat": 20.97,
+      "lon": -89.62,
+      "slope_per_decade": 2.7965,
+      "ci95": [
+        -2.4127,
+        8.0058
+      ],
+      "sen_slope_per_decade": 1.3959,
+      "pct_change_per_decade": 3.1,
+      "p_value": 0.6154053897676826,
+      "t_test_p_value": 0.28669274412304996,
+      "significant": false,
+      "direction": "no trend",
+      "lag1_autocorrelation": 0.691,
+      "effective_months": 57.0,
+      "mean": 90.3454,
+      "months": 312,
+      "start": "2000-01",
+      "end": "2025-12"
+    },
+    {
+      "id": "mexico_city",
+      "name": "Mexico City",
+      "lat": 19.43,
+      "lon": -99.13,
+      "slope_per_decade": 1.7249,
+      "ci95": [
+        -0.2712,
+        3.7211
+      ],
+      "sen_slope_per_decade": 1.4575,
+      "pct_change_per_decade": 3.07,
+      "p_value": 0.07326343125071277,
+      "t_test_p_value": 0.0895327918612589,
+      "significant": false,
+      "direction": "no trend",
+      "lag1_autocorrelation": 0.515,
+      "effective_months": 100.0,
+      "mean": 56.2569,
+      "months": 312,
+      "start": "2000-01",
+      "end": "2025-12"
+    },
+    {
+      "id": "monterrey",
+      "name": "Monterrey",
+      "lat": 25.67,
+      "lon": -100.31,
+      "slope_per_decade": 1.1432,
+      "ci95": [
+        -2.6992,
+        4.9857
+      ],
+      "sen_slope_per_decade": 0.7949,
+      "pct_change_per_decade": 2.71,
+      "p_value": 0.5649704250565204,
+      "t_test_p_value": 0.5549421866780545,
+      "significant": false,
+      "direction": "no trend",
+      "lag1_autocorrelation": 0.618,
+      "effective_months": 73.7,
+      "mean": 42.1468,
+      "months": 312,
+      "start": "2000-01",
+      "end": "2025-12"
+    },
+    {
+      "id": "puebla",
+      "name": "Puebla",
+      "lat": 19.04,
+      "lon": -98.2,
+      "slope_per_decade": 2.3869,
+      "ci95": [
+        0.62,
+        4.1537
+      ],
+      "sen_slope_per_decade": 2.2912,
+      "pct_change_per_decade": 3.52,
+      "p_value": 0.004224577436561017,
+      "t_test_p_value": 0.008476093643717136,
+      "significant": true,
+      "direction": "increasing",
+      "lag1_autocorrelation": 0.391,
+      "effective_months": 136.7,
+      "mean": 67.7209,
+      "months": 312,
+      "start": "2000-01",
+      "end": "2025-12"
+    }
+  ]
+}
